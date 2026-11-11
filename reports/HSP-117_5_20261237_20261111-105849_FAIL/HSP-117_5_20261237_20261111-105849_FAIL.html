@@ -1,0 +1,2696 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HSP-117 5 20261237 - FAIL</title>
+<style>
+  :root{
+    --paper:#f4f6f8; --card:#ffffff; --ink:#14181f; --ink-soft:#5b6672;
+    --rule:#ccd4dc; --accent:#1c4f8c;
+    --pass:#0b7a4b; --fail:#c0271f; --skip:#8a6d1f;
+    --display:"DejaVu Sans Condensed","Liberation Sans Narrow","Arial Narrow",
+              ui-sans-serif,sans-serif;
+    --mono:"DejaVu Sans Mono","Liberation Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:28px 20px 60px;background:var(--paper);color:var(--ink);
+       font-family:var(--mono);font-size:13px;line-height:1.55}
+  .wrap{max-width:940px;margin:0 auto}
+
+  /* ---- eyebrow ---- */
+  .eyebrow{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;
+           font-family:var(--display);font-size:11px;letter-spacing:.18em;
+           text-transform:uppercase;color:var(--ink-soft);
+           border-bottom:2px solid var(--ink);padding-bottom:8px}
+  .eyebrow strong{color:var(--ink);letter-spacing:.12em}
+  .eyebrow .sep{flex:1}
+
+  /* ---- the kiem tra (signature) ---- */
+  .tag{display:grid;grid-template-columns:auto 1fr auto;gap:24px;align-items:center;
+       background:var(--card);border:1px solid var(--rule);
+       border-left:6px solid var(--accent);padding:22px 24px;margin:20px 0 26px}
+  .tag .qr{width:118px;height:118px;display:block;background:#fff}
+  .tag .idlabel{font-family:var(--display);font-size:11px;letter-spacing:.2em;
+                text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px}
+  .tag .serial{font-size:clamp(22px,4.4vw,34px);font-weight:700;letter-spacing:.04em;
+               word-break:break-all;line-height:1.12}
+  .tag .meta{margin-top:10px;color:var(--ink-soft);font-size:12px}
+  .tag .meta span{display:inline-block;margin-right:16px}
+
+  .stamp{font-family:var(--display);font-size:clamp(26px,5vw,40px);font-weight:700;
+         letter-spacing:.1em;text-transform:uppercase;padding:10px 20px;
+         border:4px solid currentColor;border-radius:3px;
+         transform:rotate(-4deg);white-space:nowrap}
+  .v-pass{color:var(--pass)} .v-fail{color:var(--fail)} .v-skip{color:var(--skip)}
+
+  /* ---- tally ---- */
+  .tally{display:flex;gap:0;border:1px solid var(--rule);background:var(--card);
+         margin-bottom:26px;flex-wrap:wrap}
+  .tally div{flex:1 1 110px;padding:12px 16px;border-right:1px solid var(--rule)}
+  .tally div:last-child{border-right:0}
+  .tally b{display:block;font-size:22px;line-height:1.2}
+  .tally span{font-family:var(--display);font-size:10px;letter-spacing:.18em;
+              text-transform:uppercase;color:var(--ink-soft)}
+
+  /* ---- bang ket qua: thu tu test la thong tin thuc ---- */
+  h2{font-family:var(--display);font-size:12px;letter-spacing:.2em;
+     text-transform:uppercase;color:var(--ink-soft);margin:0 0 10px;font-weight:700}
+  table{width:100%;border-collapse:collapse;background:var(--card);
+        border:1px solid var(--rule)}
+  th{font-family:var(--display);font-size:10px;letter-spacing:.16em;
+     text-transform:uppercase;text-align:left;color:var(--ink-soft);
+     padding:9px 12px;border-bottom:2px solid var(--ink);white-space:nowrap}
+  td{padding:8px 12px;border-bottom:1px solid var(--rule);vertical-align:middle}
+  tr:last-child td{border-bottom:0}
+  .seq{color:var(--ink-soft);width:40px;font-size:11px}
+  .res{font-weight:700;letter-spacing:.06em;width:78px}
+  .num{text-align:right;color:var(--ink-soft);width:80px;white-space:nowrap}
+  .r-PASS{color:var(--pass)} .r-FAIL{color:var(--fail)}
+  .r-SKIP{color:var(--skip)} .r-UNKNOWN{color:var(--ink-soft)}
+  tr.row-FAIL td{background:#fdf1f0}
+
+  /* ---- log ---- */
+  details{margin-top:26px;border:1px solid var(--rule);background:var(--card)}
+  summary{cursor:pointer;padding:11px 14px;font-family:var(--display);font-size:11px;
+          letter-spacing:.18em;text-transform:uppercase;color:var(--accent)}
+  summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  pre{margin:0;padding:16px;border-top:1px solid var(--rule);overflow-x:auto;
+      font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-word;
+      max-height:70vh;overflow-y:auto;background:#fbfcfd}
+  footer{margin-top:28px;padding-top:10px;border-top:1px solid var(--rule);
+         font-family:var(--display);font-size:10px;letter-spacing:.16em;
+         text-transform:uppercase;color:var(--ink-soft)}
+
+  @media (max-width:640px){
+    .tag{grid-template-columns:1fr;justify-items:start;gap:16px}
+    .stamp{transform:none}
+  }
+  @media print{
+    body{background:#fff;padding:0}
+    details{display:none}
+    .tag{border-left-width:4px}
+  }
+
+  /* ---- bổ sung cho HSP-117 ---- */
+  tr.grp td{background:#eef2f6;font-family:var(--display);font-size:11px;letter-spacing:.18em;
+            text-transform:uppercase;color:var(--accent);font-weight:700;padding:7px 12px}
+  td.det{color:var(--ink-soft);font-size:12px;word-break:break-word}
+  .tag .qr[hidden]{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">
+    <strong>HSPTEK</strong>
+    <span>HSP-117 &middot; Camera Bullet QCS6490 QLI1.9</span>
+    <span class="sep"></span>
+    <span>MMI Test Report</span>
+  </div>
+
+  <section class="tag">
+    <img class="qr" src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=20261237" alt="QR 20261237" onerror="this.hidden=true">
+    <div>
+      <div class="idlabel">HSPTek ID</div><div class="serial">5</div>
+      <div class="idlabel">Serial number</div>
+      <div class="serial">20261237</div>
+      <div class="meta">
+        <span>Bắt đầu: 2026-11-11 10:58:49</span>
+        <span>Thời lượng: 5m57s</span>
+        <span>CPU: 8</span>
+        <span>Kết nối: adb 192.168.1.249:5555</span>
+      </div>
+    </div>
+    <div class="stamp v-fail">FAIL</div>
+  </section>
+
+  <div class="tally">
+    <div><b class="r-PASS">32</b><span>Pass</span></div>
+    <div><b class="r-FAIL">14</b><span>Fail</span></div>
+    <div><b class="r-SKIP">0</b><span>Skip</span></div>
+  </div>
+
+  <h2>Kết quả theo thứ tự thực thi</h2>
+  <table>
+    <thead><tr><th class="seq">Mục</th><th>Bài test</th><th>Kết quả</th>
+    <th class="num">Bắt đầu</th><th class="num">Thời gian</th></tr></thead>
+    <tbody>
+      <tr class="grp"><td colspan="5">COM</td></tr>
+      <tr class="row-PASS"><td class="seq">1.1</td><td>Kiểm tra số core của CPU</td><td class="res r-PASS">PASS</td><td class="num">10:58:50</td><td class="num">0s</td></tr>
+      <tr class="row-PASS"><td class="seq">1.2</td><td>Kiểm tra RAM</td><td class="res r-PASS">PASS</td><td class="num">10:58:50</td><td class="num">0s</td></tr>
+      <tr class="row-PASS"><td class="seq">1.3</td><td>Kiểm tra storage</td><td class="res r-PASS">PASS</td><td class="num">10:58:50</td><td class="num">0s</td></tr>
+      <tr class="grp"><td colspan="5">ETHERNET</td></tr>
+      <tr class="row-PASS"><td class="seq">2.1</td><td>Kiểm tra tốc độ nhận</td><td class="res r-PASS">PASS</td><td class="num">10:58:50</td><td class="num">12s</td></tr>
+      <tr class="row-PASS"><td class="seq">2.2</td><td>Kiểm tra tốc độ truyền</td><td class="res r-PASS">PASS</td><td class="num">10:59:02</td><td class="num">10s</td></tr>
+      <tr class="row-PASS"><td class="seq">2.3</td><td>Kiểm tra tốc độ truyền và nhận</td><td class="res r-PASS">PASS</td><td class="num">10:59:12</td><td class="num">10s</td></tr>
+      <tr class="grp"><td colspan="5">NVME</td></tr>
+      <tr class="row-FAIL"><td class="seq">3.1</td><td>Kiểm tra NVME</td><td class="res r-FAIL">FAIL</td><td class="num">10:59:22</td><td class="num">0s</td></tr>
+      <tr class="row-FAIL"><td class="seq">3.2</td><td>Kiểm tra tốc độ ghi của NVME</td><td class="res r-FAIL">FAIL</td><td class="num">10:59:22</td><td class="num">0s</td></tr>
+      <tr class="row-FAIL"><td class="seq">3.3</td><td>Kiểm tra tốc độ đọc của NVME</td><td class="res r-FAIL">FAIL</td><td class="num">10:59:22</td><td class="num">0s</td></tr>
+      <tr class="grp"><td colspan="5">GPS</td></tr>
+      <tr class="row-PASS"><td class="seq">4.1</td><td>Kiểm tra nhận dữ liệu</td><td class="res r-PASS">PASS</td><td class="num">10:59:22</td><td class="num">17s</td></tr>
+      <tr class="row-FAIL"><td class="seq">4.2</td><td>Kiểm tra bắt vệ tinh</td><td class="res r-FAIL">FAIL</td><td class="num">10:59:39</td><td class="num">0s</td></tr>
+      <tr class="row-FAIL"><td class="seq">4.3</td><td>Kiểm tra GNSS Fix</td><td class="res r-FAIL">FAIL</td><td class="num">10:59:39</td><td class="num">0s</td></tr>
+      <tr class="row-FAIL"><td class="seq">4.4</td><td>Kiểm tra tọa độ</td><td class="res r-FAIL">FAIL</td><td class="num">10:59:39</td><td class="num">0s</td></tr>
+      <tr class="row-FAIL"><td class="seq">4.5</td><td>Kiểm tra trạng thái Navigation</td><td class="res r-FAIL">FAIL</td><td class="num">10:59:39</td><td class="num">0s</td></tr>
+      <tr class="grp"><td colspan="5">RTC</td></tr>
+      <tr class="row-PASS"><td class="seq">5.1</td><td>Kiểm tra nhận diện RTC</td><td class="res r-PASS">PASS</td><td class="num">10:59:39</td><td class="num">0s</td></tr>
+      <tr class="row-PASS"><td class="seq">5.2</td><td>Đọc thời gian từ RTC</td><td class="res r-PASS">PASS</td><td class="num">10:59:39</td><td class="num">1s</td></tr>
+      <tr class="row-PASS"><td class="seq">5.3</td><td>Set thời gian cho RTC</td><td class="res r-PASS">PASS</td><td class="num">10:59:40</td><td class="num">3s</td></tr>
+      <tr class="row-FAIL"><td class="seq">5.4</td><td>Kiểm tra giữ time sau khi rút nguồn</td><td class="res r-FAIL">FAIL</td><td class="num">10:59:43</td><td class="num">0s</td></tr>
+      <tr class="row-FAIL"><td class="seq">5.5</td><td>Đồng bộ RTC (không internet)</td><td class="res r-FAIL">FAIL</td><td class="num">10:59:43</td><td class="num">0s</td></tr>
+      <tr class="row-PASS"><td class="seq">5.6</td><td>Đồng bộ RTC (có internet)</td><td class="res r-PASS">PASS</td><td class="num">10:59:43</td><td class="num">1s</td></tr>
+      <tr class="grp"><td colspan="5">SD_CARD</td></tr>
+      <tr class="row-FAIL"><td class="seq">6.1</td><td>Kiểm tra nhận SDCARD</td><td class="res r-FAIL">FAIL</td><td class="num">10:59:44</td><td class="num">0s</td></tr>
+      <tr class="row-FAIL"><td class="seq">6.2</td><td>Kiểm tra ghi</td><td class="res r-FAIL">FAIL</td><td class="num">10:59:44</td><td class="num">0s</td></tr>
+      <tr class="row-FAIL"><td class="seq">6.3</td><td>Kiểm tra đọc</td><td class="res r-FAIL">FAIL</td><td class="num">10:59:44</td><td class="num">0s</td></tr>
+      <tr class="grp"><td colspan="5">TPM</td></tr>
+      <tr class="row-PASS"><td class="seq">7.1</td><td>Kiểm tra nhận TPM</td><td class="res r-PASS">PASS</td><td class="num">10:59:44</td><td class="num">1s</td></tr>
+      <tr class="row-PASS"><td class="seq">7.2</td><td>Kiểm tra chức năng TPM</td><td class="res r-PASS">PASS</td><td class="num">10:59:45</td><td class="num">1s</td></tr>
+      <tr class="grp"><td colspan="5">ALARM_IO</td></tr>
+      <tr class="row-PASS"><td class="seq">8.1</td><td>Alarm IN</td><td class="res r-PASS">PASS</td><td class="num">10:59:46</td><td class="num">1s</td></tr>
+      <tr class="row-PASS"><td class="seq">8.2</td><td>Alarm OUT</td><td class="res r-PASS">PASS</td><td class="num">10:59:47</td><td class="num">16s</td></tr>
+      <tr class="grp"><td colspan="5">CAMERA</td></tr>
+      <tr class="row-PASS"><td class="seq">9.1</td><td>Chụp ảnh 1080p30 và 4K30</td><td class="res r-PASS">PASS</td><td class="num">11:00:04</td><td class="num">21s</td></tr>
+      <tr class="row-PASS"><td class="seq">9.2</td><td>Quay video 1080p30 và 4K30</td><td class="res r-PASS">PASS</td><td class="num">11:00:25</td><td class="num">25s</td></tr>
+      <tr class="row-PASS"><td class="seq">9.3</td><td>Stream RTSP</td><td class="res r-PASS">PASS</td><td class="num">11:00:50</td><td class="num">58s</td></tr>
+      <tr class="grp"><td colspan="5">AUDIO</td></tr>
+      <tr class="row-PASS"><td class="seq">10.1</td><td>Kiểm tra nhận diện Sound Card</td><td class="res r-PASS">PASS</td><td class="num">11:01:50</td><td class="num">0s</td></tr>
+      <tr class="row-PASS"><td class="seq">10.2</td><td>WSA - Loa trong</td><td class="res r-PASS">PASS</td><td class="num">11:01:50</td><td class="num">9s</td></tr>
+      <tr class="row-FAIL"><td class="seq">10.3</td><td>WCD - Line In</td><td class="res r-FAIL">FAIL</td><td class="num">11:01:59</td><td class="num">24s</td></tr>
+      <tr class="row-FAIL"><td class="seq">10.4</td><td>WCD - Line Out</td><td class="res r-FAIL">FAIL</td><td class="num">11:02:23</td><td class="num">9s</td></tr>
+      <tr class="grp"><td colspan="5">LENS</td></tr>
+      <tr class="row-PASS"><td class="seq">11.1</td><td>Zoom</td><td class="res r-PASS">PASS</td><td class="num">11:02:32</td><td class="num">33s</td></tr>
+      <tr class="row-PASS"><td class="seq">11.2</td><td>Focus</td><td class="res r-PASS">PASS</td><td class="num">11:03:05</td><td class="num">14s</td></tr>
+      <tr class="row-PASS"><td class="seq">11.3</td><td>Iris</td><td class="res r-PASS">PASS</td><td class="num">11:03:19</td><td class="num">14s</td></tr>
+      <tr class="row-PASS"><td class="seq">11.4</td><td>IR CUT</td><td class="res r-PASS">PASS</td><td class="num">11:03:33</td><td class="num">21s</td></tr>
+      <tr class="row-PASS"><td class="seq">11.5</td><td>Nhiệt độ</td><td class="res r-PASS">PASS</td><td class="num">11:03:56</td><td class="num">0s</td></tr>
+      <tr class="row-PASS"><td class="seq">11.6</td><td>Cảm biến ánh sáng</td><td class="res r-PASS">PASS</td><td class="num">11:03:56</td><td class="num">0s</td></tr>
+      <tr class="row-PASS"><td class="seq">11.7</td><td>IR LED</td><td class="res r-PASS">PASS</td><td class="num">11:03:56</td><td class="num">9s</td></tr>
+      <tr class="grp"><td colspan="5">SENSOR</td></tr>
+      <tr class="row-PASS"><td class="seq">12.1</td><td>Kiểm tra các Sensor</td><td class="res r-PASS">PASS</td><td class="num">11:04:07</td><td class="num">0s</td></tr>
+      <tr class="row-PASS"><td class="seq">12.2</td><td>Kiểm tra gia tốc và Gyro</td><td class="res r-PASS">PASS</td><td class="num">11:04:07</td><td class="num">23s</td></tr>
+      <tr class="row-PASS"><td class="seq">12.3</td><td>Kiểm tra từ trường</td><td class="res r-PASS">PASS</td><td class="num">11:04:30</td><td class="num">11s</td></tr>
+      <tr class="row-PASS"><td class="seq">12.4</td><td>Kiểm tra đọc nhiệt độ và độ ẩm</td><td class="res r-PASS">PASS</td><td class="num">11:04:41</td><td class="num">1s</td></tr>
+      <tr class="row-PASS"><td class="seq">12.5</td><td>Kiểm tra nhiệt độ, độ ẩm liên tục</td><td class="res r-PASS">PASS</td><td class="num">11:04:42</td><td class="num">4s</td></tr>
+    </tbody>
+  </table>
+
+  <details>
+    <summary>Log chi tiết</summary>
+    <pre>
+===== HSPTEK MMI TEST REPORT =====
+Product      : Camera Bullet QCS6490 QLI1.9 (HSP-117)
+HSPTEK ID    : 5
+Device ID    : 20261237
+Connection   : adb 192.168.1.249:5555
+Start time   : 2026-11-11 10:58:49
+Host         : tuananh
+==================================
+===== PRECHECK =====
+Thiết bị : adb 192.168.1.249:5555   ID: 20261237   uid=0
+Tool trên thiết bị:
+  OK       iperf3
+  OK       fio
+  OK       lspci
+  OK       hwclock
+  OK       timedatectl
+  OK       i2cdetect
+  OK       tpm2_getcap
+  OK       tpm2_pcrread
+  OK       tpm2_hash
+  OK       tpm2_selftest
+  OK       tpm2_getrandom
+  OK       tinymix
+  OK       agmplay
+  OK       agmcap
+  OK       aplay
+  OK       arecord
+  OK       see_workhorse
+  OK       ssc_sensor_info
+  OK       gst-launch-1.0
+  OK       gst-rtsp-server
+  OK       python3
+  OK       sha1sum
+  OK       pgrep
+  OK       lens_manage (/usr/bin/lens_manage)
+Tool trên PC:
+  OK       adb
+  OK       iperf3
+  OK       ffmpeg
+  OK       ffprobe
+  OK       ffplay
+  OK       vlc
+
+
+########## NHÓM: COM ##########
+
+[1.1] Kiểm tra số core của CPU
+  $ grep -c &#x27;^processor&#x27; /proc/cpuinfo -&gt; 8
+  → PASS  CPU: 8 core
+
+[1.2] Kiểm tra RAM
+                   total        used        free      shared  buff/cache   available
+    Mem:           7.2Gi       1.1Gi       5.4Gi        53Mi       670Mi       6.1Gi
+  → PASS  RAM tổng 7.2G (&gt;= 7.2G), free 5.4G (&gt; 5G)
+
+[1.3] Kiểm tra storage
+    sda       8:0    0 117.1G  0 disk 
+    |-sda1    8:1    0   512M  0 part /boot
+    |-sda2    8:2    0    30M  0 part /var/persist
+    `-sda3    8:3    0 116.5G  0 part /var
+  → PASS  sda: 117.1G (&gt;= 115G)
+
+########## NHÓM: ETHERNET ##########
+
+[2.1] Kiểm tra tốc độ nhận
+  $ iperf3 -c 192.168.1.89 -p 5201 -t 10 -R   (khoảng 10s, chờ kết quả...)
+Connecting to host 192.168.1.89, port 5201
+Reverse mode, remote host 192.168.1.89 is sending
+[  5] local 192.168.1.19 port 52608 connected to 192.168.1.89 port 5201
+[ ID] Interval           Transfer     Bitrate
+[  5]   0.00-1.00   sec   112 MBytes   938 Mbits/sec                  
+[  5]   1.00-2.00   sec   112 MBytes   939 Mbits/sec                  
+[  5]   2.00-3.00   sec   112 MBytes   941 Mbits/sec                  
+[  5]   3.00-4.00   sec   112 MBytes   941 Mbits/sec                  
+[  5]   4.00-5.00   sec   112 MBytes   941 Mbits/sec                  
+[  5]   5.00-6.00   sec   112 MBytes   942 Mbits/sec                  
+[  5]   6.00-7.00   sec   112 MBytes   941 Mbits/sec                  
+[  5]   7.00-8.00   sec   112 MBytes   941 Mbits/sec                  
+[  5]   8.00-9.00   sec   112 MBytes   941 Mbits/sec                  
+[  5]   9.00-10.00  sec   112 MBytes   940 Mbits/sec                  
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Retr
+[  5]   0.00-10.04  sec  1.10 GBytes   938 Mbits/sec    1            sender
+[  5]   0.00-10.00  sec  1.09 GBytes   940 Mbits/sec                  receiver
+
+iperf Done.
+  → PASS  Nhận: 940 Mbps (&gt; 900)
+
+[2.2] Kiểm tra tốc độ truyền
+  $ iperf3 -c 192.168.1.89 -p 5201 -t 10    (khoảng 10s, chờ kết quả...)
+Connecting to host 192.168.1.89, port 5201
+[  5] local 192.168.1.19 port 37134 connected to 192.168.1.89 port 5201
+[ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+[  5]   0.00-1.00   sec   114 MBytes   950 Mbits/sec    0    667 KBytes       
+[  5]   1.00-2.00   sec   111 MBytes   932 Mbits/sec    0    667 KBytes       
+[  5]   2.00-3.00   sec   112 MBytes   943 Mbits/sec    0    667 KBytes       
+[  5]   3.00-4.00   sec   112 MBytes   942 Mbits/sec    0    667 KBytes       
+[  5]   4.00-5.00   sec   113 MBytes   945 Mbits/sec    0    667 KBytes       
+[  5]   5.00-6.00   sec   112 MBytes   942 Mbits/sec    0    667 KBytes       
+[  5]   6.00-7.00   sec   112 MBytes   943 Mbits/sec    0    667 KBytes       
+[  5]   7.00-8.00   sec   111 MBytes   934 Mbits/sec    0    667 KBytes       
+[  5]   8.00-9.00   sec   112 MBytes   944 Mbits/sec    0    667 KBytes       
+[  5]   9.00-10.00  sec   112 MBytes   943 Mbits/sec    0    667 KBytes       
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Retr
+[  5]   0.00-10.00  sec  1.10 GBytes   943 Mbits/sec    0            sender
+[  5]   0.00-10.05  sec  1.10 GBytes   936 Mbits/sec                  receiver
+
+iperf Done.
+  → PASS  Truyền: 936 Mbps (&gt; 900)
+
+[2.3] Kiểm tra tốc độ truyền và nhận
+  $ iperf3 -c 192.168.1.89 -p 5201 -t 10 --bidir   (khoảng 10s, chờ kết quả...)
+Connecting to host 192.168.1.89, port 5201
+[  5] local 192.168.1.19 port 36946 connected to 192.168.1.89 port 5201
+[  7] local 192.168.1.19 port 36950 connected to 192.168.1.89 port 5201
+[ ID][Role] Interval           Transfer     Bitrate         Retr  Cwnd
+[  5][TX-C]   0.00-1.00   sec   114 MBytes   959 Mbits/sec    0    720 KBytes       
+[  7][RX-C]   0.00-1.00   sec  97.1 MBytes   814 Mbits/sec                  
+[  5][TX-C]   1.00-2.00   sec   112 MBytes   940 Mbits/sec    0    720 KBytes       
+[  7][RX-C]   1.00-2.00   sec  96.9 MBytes   813 Mbits/sec                  
+[  5][TX-C]   2.00-3.00   sec   112 MBytes   941 Mbits/sec    0    720 KBytes       
+[  7][RX-C]   2.00-3.00   sec  97.0 MBytes   814 Mbits/sec                  
+[  5][TX-C]   3.00-4.00   sec   111 MBytes   930 Mbits/sec    0    720 KBytes       
+[  7][RX-C]   3.00-4.00   sec  97.0 MBytes   814 Mbits/sec                  
+[  5][TX-C]   4.00-5.00   sec   112 MBytes   935 Mbits/sec   98    553 KBytes       
+[  7][RX-C]   4.00-5.00   sec  96.6 MBytes   811 Mbits/sec                  
+[  5][TX-C]   5.00-6.00   sec   113 MBytes   945 Mbits/sec    0    646 KBytes       
+[  7][RX-C]   5.00-6.00   sec  97.0 MBytes   814 Mbits/sec                  
+[  5][TX-C]   6.00-7.00   sec   112 MBytes   936 Mbits/sec    0    658 KBytes       
+[  7][RX-C]   6.00-7.00   sec  97.0 MBytes   814 Mbits/sec                  
+[  5][TX-C]   7.00-8.00   sec   112 MBytes   942 Mbits/sec    0    691 KBytes       
+[  7][RX-C]   7.00-8.00   sec  97.0 MBytes   814 Mbits/sec                  
+[  5][TX-C]   8.00-9.00   sec   112 MBytes   939 Mbits/sec    0    704 KBytes       
+[  7][RX-C]   8.00-9.00   sec  96.9 MBytes   813 Mbits/sec                  
+[  5][TX-C]   9.00-10.00  sec   111 MBytes   929 Mbits/sec    0    704 KBytes       
+[  7][RX-C]   9.00-10.00  sec  97.1 MBytes   814 Mbits/sec                  
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID][Role] Interval           Transfer     Bitrate         Retr
+[  5][TX-C]   0.00-10.00  sec  1.09 GBytes   940 Mbits/sec   98            sender
+[  5][TX-C]   0.00-10.05  sec  1.09 GBytes   934 Mbits/sec                  receiver
+[  7][RX-C]   0.00-10.00  sec   973 MBytes   816 Mbits/sec    1            sender
+[  7][RX-C]   0.00-10.05  sec   970 MBytes   810 Mbits/sec                  receiver
+
+iperf Done.
+  → PASS  Truyền: 934 Mbps, nhận: 810 Mbps (mỗi chiều &gt; 700)
+
+########## NHÓM: NVME ##########
+
+[3.1] Kiểm tra NVME
+  → FAIL  Không thấy thiết bị NVMe (lspci chỉ có: 1 thiết bị PCI)
+
+[3.2] Kiểm tra tốc độ ghi của NVME
+  → FAIL  Không thực hiện được: Không thấy /dev/nvme0n1 (xem 3.1)
+
+[3.3] Kiểm tra tốc độ đọc của NVME
+  → FAIL  Không thực hiện được: Không thấy /dev/nvme0n1 (xem 3.1)
+
+########## NHÓM: GPS ##########
+
+[4.1] Kiểm tra nhận dữ liệu
+  ⚠ LƯU Ý GPS: ăng-ten GPS phải đặt NGOÀI TRỜI, nhìn thấy bầu trời (không che chắn).
+    Trong nhà hoặc ăng-ten chưa cắm: 4.2 - 4.5 sẽ FAIL (không bắt được vệ tinh/không Fix).
+  Thu bản tin NMEA từ /dev/ttyHS1 trong 15s ...
+  → PASS  Đủ bản tin (mỗi loại &gt;= 2 lần/15s): GNGGA=15 GPGSA=15 GLGSA=15 GPGSV=15 GLGSV=15 GNRMC=15 GNVTG=15
+
+[4.2] Kiểm tra bắt vệ tinh
+  → FAIL  Số vệ tinh nhìn thấy = 0 (GPS=0, GLONASS=0)
+
+[4.3] Kiểm tra GNSS Fix
+  → FAIL  Chưa Fix: fix quality=&#x27;0&#x27;, số vệ tinh dùng=&#x27;0&#x27; (cần đặt ăng-ten nhìn trời)
+
+[4.4] Kiểm tra tọa độ
+  → FAIL  Chưa có tọa độ hợp lệ (trường vị trí trống hoặc sai định dạng): $GNGGA,005327.094,,,,,0,0,,,M,,M,,*58
+
+[4.5] Kiểm tra trạng thái Navigation
+  → FAIL  Status=&#x27;V&#x27; (cần A), giờ=&#x27;005327.094&#x27;, ngày=&#x27;060180&#x27;, vị trí=&#x27;&#x27;
+
+########## NHÓM: RTC ##########
+
+[5.1] Kiểm tra nhận diện RTC
+  I2C OK: RTC i2c-1 0x51 (UU = driver đang giữ)
+  → PASS  [    0.454133] rtc-pcf8563 1-0051: low voltage detected, date/time is not reliable.
+
+[5.2] Đọc thời gian từ RTC
+  I2C OK: RTC i2c-1 0x51 (UU = driver đang giữ)
+  → PASS  RTC: 2026-11-11 03:59:40.894750+00:00
+
+[5.3] Set thời gian cho RTC
+  I2C OK: RTC i2c-1 0x51 (UU = driver đang giữ)
+  → PASS  Đặt 2026-01-27 08:49:00, đọc lại: 2026-01-27 08:49:01.398404+00:00 (lệch 1s &lt;= 5s); đã khôi phục giờ PC
+
+[5.4] Kiểm tra giữ time sau khi rút nguồn
+  → FAIL  Không thực hiện được: Mục rút nguồn/nặng (power,manual) không chạy trong --all, chạy bằng --heavy hoặc --case 5.4
+
+[5.5] Đồng bộ RTC (không internet)
+  → FAIL  Không thực hiện được: Mục rút nguồn/nặng (power,manual) không chạy trong --all, chạy bằng --heavy hoặc --case 5.5
+
+[5.6] Đồng bộ RTC (có internet)
+  I2C OK: RTC i2c-1 0x51 (UU = driver đang giữ)
+  → PASS  Hệ thống lệch 0s, RTC lệch 0s so với giờ chuẩn (&lt;= 60s); RTC=2026-11-11 03:59:44 UTC
+
+########## NHÓM: SD_CARD ##########
+
+[6.1] Kiểm tra nhận SDCARD
+  → FAIL  Không thấy /dev/mmcblk* (chưa cắm thẻ SD?)
+
+[6.2] Kiểm tra ghi
+  → FAIL  Không thực hiện được: Không có SD card (xem 6.1)
+
+[6.3] Kiểm tra đọc
+  → FAIL  Không thực hiện được: Không có SD card (xem 6.1)
+
+########## NHÓM: TPM ##########
+
+[7.1] Kiểm tra nhận TPM
+  I2C OK: TPM i2c-13 0x2e (UU = driver đang giữ)
+  → PASS  dmesg có TPM; i2c-13: UU; /dev/tpm0 /dev/tpmrm0
+
+[7.2] Kiểm tra chức năng TPM
+  I2C OK: TPM i2c-13 0x2e (UU = driver đang giữ)
+  → PASS  6/6 lệnh TPM2 thành công (getcap x2, pcrread, getrandom, hash, selftest); random=e4f201c148b0ba6e...
+
+########## NHÓM: ALARM_IO ##########
+
+[8.1] Alarm IN
+  → PASS  GPIO56=IN/HIGH GPIO88=IN/HIGH
+
+[8.2] Alarm OUT
+  Gợi ý nếu có đồng hồ: echo 0 -&gt; 0V, echo 1 -&gt; 12V (không tính vào kết quả)
+  ALARM_OUT1: GPIO670 chưa export -&gt; export
+  ALARM_OUT1 (GPIO670): đang echo 0/1 3 lần - LẮNG NGHE rơ-le...
+    lần 1/3: echo 0 -&gt; echo 1
+    lần 2/3: echo 0 -&gt; echo 1
+    lần 3/3: echo 0 -&gt; echo 1
+
+════════════════════════════════════════════════════════════════
+▶ CẦN NGƯỜI TEST ĐÁNH GIÁ  [8.2] Alarm OUT
+   ALARM_OUT1: nghe thấy tiếng rơ-le &#x27;tạch tạch&#x27; khi echo 0/1?
+════════════════════════════════════════════════════════════════
+   -&gt; Nguoi test chon: DAT
+  ALARM_OUT2: GPIO668 chưa export -&gt; export
+  ALARM_OUT2 (GPIO668): đang echo 0/1 3 lần - LẮNG NGHE rơ-le...
+    lần 1/3: echo 0 -&gt; echo 1
+    lần 2/3: echo 0 -&gt; echo 1
+    lần 3/3: echo 0 -&gt; echo 1
+
+════════════════════════════════════════════════════════════════
+▶ CẦN NGƯỜI TEST ĐÁNH GIÁ  [8.2] Alarm OUT
+   ALARM_OUT2: nghe thấy tiếng rơ-le &#x27;tạch tạch&#x27; khi echo 0/1?
+════════════════════════════════════════════════════════════════
+   -&gt; Nguoi test chon: DAT
+  → PASS  ALARM_OUT1/2 (670 668): đã export, echo 0/1 3 lần, nghe tiếng rơ-le
+
+########## NHÓM: CAMERA ##########
+
+[9.1] Chụp ảnh 1080p30 và 4K30
+  Chụp 1080p (1920x1080) ...
+  Chụp 4k (3840x2160) ...
+
+════════════════════════════════════════════════════════════════
+▶ CẦN NGƯỜI TEST ĐÁNH GIÁ  [9.1] Chụp ảnh 1080p30 và 4K30
+   Ảnh 1080p và 4K rõ nét, màu/độ sáng bình thường, không méo/sọc/mất góc?
+════════════════════════════════════════════════════════════════
+   -&gt; Nguoi test chon: DAT
+  → PASS  Ảnh đúng kích thước: 1080p: 1920x1080, 772924 byte; 4k: 3840x2160, 2617056 byte; người test xác nhận chất lượng
+
+[9.2] Quay video 1080p30 và 4K30
+  Quay 1080p (1920x1080) 5s ...
+  Quay 4k (3840x2160) 5s ...
+
+════════════════════════════════════════════════════════════════
+▶ CẦN NGƯỜI TEST ĐÁNH GIÁ  [9.2] Quay video 1080p30 và 4K30
+   Video 1080p và 4K phát mượt, không nháy/sọc/mất góc, hình đúng chất lượng?
+════════════════════════════════════════════════════════════════
+   -&gt; Nguoi test chon: DAT
+  → PASS  Video đúng định dạng: 1080p: h264 1920x1080 30.1 fps, 2795053 byte; 4k: h264 3840x2160 30.1 fps, 3810757 byte; người test xác nhận chất lượng
+
+[9.3] Stream RTSP
+  Bật RTSP 1920x1080: rtsp://192.168.1.249:8900/live
+  Stream OK: h264 1920x1080 29.2fps
+
+════════════════════════════════════════════════════════════════
+▶ CẦN NGƯỜI TEST ĐÁNH GIÁ  [9.3] Stream RTSP
+   Stream RTSP 1920x1080 (cửa sổ VLC đang mở, URL rtsp://192.168.1.249:8900/live) hiển thị liên tục, không giật/đứng hình/vỡ hình?
+════════════════════════════════════════════════════════════════
+   -&gt; Nguoi test chon: DAT
+  Bật RTSP 3840x2160: rtsp://192.168.1.249:8900/live
+  Stream OK: h264 3840x2160 29.3fps
+
+════════════════════════════════════════════════════════════════
+▶ CẦN NGƯỜI TEST ĐÁNH GIÁ  [9.3] Stream RTSP
+   Stream RTSP 3840x2160 (cửa sổ VLC đang mở, URL rtsp://192.168.1.249:8900/live) hiển thị liên tục, không giật/đứng hình/vỡ hình?
+════════════════════════════════════════════════════════════════
+   -&gt; Nguoi test chon: DAT
+  → PASS  RTSP đạt: 1920x1080: h264 1920x1080 29.2fps; 3840x2160: h264 3840x2160 29.3fps; người test xác nhận hình ảnh
+
+########## NHÓM: AUDIO ##########
+
+[10.1] Kiểm tra nhận diện Sound Card
+  → PASS  Phát: 2 thiết bị, thu: 3 thiết bị
+
+[10.2] WSA - Loa trong
+  Đang phát tone 1 kHz (5s) - Loa trong (WSA) ...
+Stopping &#x27;pipewire.service&#x27;, but its triggering units are still active:
+pipewire.socket, pipewire-manager.socket
+PCM format found
+Valid format from backend_conf 0
+Backend CODEC_DMA-LPAIF_WSA-RX-0 rate ch bit fmt : 48000, 2, 16 0
+Instance key is added
+pcm_plug_open: dlopen successful for libagm_pcm_plugin.so
+Playing sample: 2 ch, 48000 hz, 16 bit
+diag: Diag_LSM_Init: invoked for pid: 12541 with init_count: 0
+diag:successfully connected to socket 17
+diag: Diag_LSM_Init: done for pid: 12541 with init_count: 1
+diag: Successfully registered commands with the driver
+agmplay rc=0
+
+
+════════════════════════════════════════════════════════════════
+▶ CẦN NGƯỜI TEST ĐÁNH GIÁ  [10.2] WSA - Loa trong
+   Có âm thanh phát ra từ LOA TRONG, rõ, không rè/nhiễu?
+════════════════════════════════════════════════════════════════
+   -&gt; Nguoi test chon: DAT
+  → PASS  Loa trong (WSA): có âm thanh rõ, không rè/nhiễu
+
+[10.3] WCD - Line In
+  Thu AMIC3 (5s) ...
+Stopping &#x27;pipewire.service&#x27;, but its triggering units are still active:
+pipewire.socket, pipewire-manager.socket
+pcm_plug_open: dlopen successful for libagm_pcm_plugin.so
+Capturing sample: 1 ch, 48000 hz, 16 bit
+diag: Diag_LSM_Init: invoked for pid: 12597 with init_count: 0
+diag:successfully connected to socket 17
+diag: Diag_LSM_Init: done for pid: 12597 with init_count: 1
+diag: Successfully registered commands with the driver
+Captured 241664 frames
+
+  Kết quả phân tích: mic_3: 5.0s RMS=33 peak=2812;
+  Phát lại mic_3 trên PC...
+
+════════════════════════════════════════════════════════════════
+▶ CẦN NGƯỜI TEST ĐÁNH GIÁ  [10.3] WCD - Line In
+   File thu AMIC3 (Line In) có tiếng rõ, không rè/nhiễu quá nhiều?
+════════════════════════════════════════════════════════════════
+   -&gt; Nguoi test chon: KHONG DAT
+  → FAIL  Người test: file thu AMIC3 bị rè/nhiễu/mất tiếng: mic_3: 5.0s RMS=33 peak=2812;
+
+[10.4] WCD - Line Out
+  Đang phát tone 1 kHz (5s) - Line Out (WCD) ...
+Stopping &#x27;pipewire.service&#x27;, but its triggering units are still active:
+pipewire.socket, pipewire-manager.socket
+Backend CODEC_DMA-LPAIF_RXTX-RX-0 rate ch bit fmt : 48000, 2, 16 -1
+Instance key is added
+pcm_plug_open: dlopen successful for libagm_pcm_plugin.so
+Playing sample: 2 ch, 48000 hz, 16 bit
+diag: Diag_LSM_Init: invoked for pid: 12705 with init_count: 0
+diag:successfully connected to socket 17
+diag: Diag_LSM_Init: done for pid: 12705 with init_count: 1
+diag: Successfully registered commands with the driver
+agmplay rc=0
+
+
+════════════════════════════════════════════════════════════════
+▶ CẦN NGƯỜI TEST ĐÁNH GIÁ  [10.4] WCD - Line Out
+   Có âm thanh phát ra từ LINE OUT, rõ, không rè/nhiễu?
+════════════════════════════════════════════════════════════════
+   -&gt; Nguoi test chon: KHONG DAT
+  → FAIL  Line Out (WCD): không có âm thanh hoặc rè/nhiễu
+
+########## NHÓM: LENS ##########
+
+[11.1] Zoom
+  I2C OK: LENS i2c-1 0x1c (1c)
+  Bật RTSP 1920x1080 để quan sát: rtsp://192.168.1.249:8900/live
+  Stream OK: h264 1920x1080 29.3fps
+  Stream: rtsp://192.168.1.249:8900/live -&gt; nhìn cửa sổ video (đặt vật có chi tiết trước camera để đánh giá nét/zoom)
+  Quan sát lens/hình ảnh trong lúc chạy: Zoom
+$ lens_manage calib zoom
+   rc=0
+$ lens_manage zoom-set 500
+ZOOM: da ghi target=500
+   rc=0
+$ lens_manage zoom-set 100
+ZOOM: da ghi target=100
+   rc=0
+$ lens_manage zoom-set 0
+ZOOM: da ghi target=0
+   rc=0
+
+
+════════════════════════════════════════════════════════════════
+▶ CẦN NGƯỜI TEST ĐÁNH GIÁ  [11.1] Zoom
+   Trên stream, hình ảnh phóng to/thu nhỏ tương ứng với zoom 500 -&gt; 100 -&gt; 0?
+════════════════════════════════════════════════════════════════
+   -&gt; Nguoi test chon: DAT
+  → PASS  Zoom: lệnh chạy rc=0, người test xác nhận hoạt động đúng
+
+[11.2] Focus
+  I2C OK: LENS i2c-1 0x1c (1c)
+  Stream: rtsp://192.168.1.249:8900/live -&gt; nhìn cửa sổ video (đặt vật có chi tiết trước camera để đánh giá nét/zoom)
+  Quan sát lens/hình ảnh trong lúc chạy: Focus
+$ lens_manage calib focus
+   rc=0
+$ lens_manage focus-set 500
+FOCUS: da ghi target=500
+   rc=0
+$ lens_manage focus-set 50
+FOCUS: da ghi target=50
+   rc=0
+$ lens_manage focus-set 0
+FOCUS: da ghi target=0
+   rc=0
+
+
+════════════════════════════════════════════════════════════════
+▶ CẦN NGƯỜI TEST ĐÁNH GIÁ  [11.2] Focus
+   Trên stream, độ nét hình ảnh thay đổi tương ứng với focus 500 -&gt; 50 -&gt; 0?
+════════════════════════════════════════════════════════════════
+   -&gt; Nguoi test chon: DAT
+  → PASS  Focus: lệnh chạy rc=0, người test xác nhận hoạt động đúng
+
+[11.3] Iris
+  I2C OK: LENS i2c-1 0x1c (1c)
+  Stream: rtsp://192.168.1.249:8900/live -&gt; nhìn cửa sổ video (đặt vật có chi tiết trước camera để đánh giá nét/zoom)
+  Quan sát lens/hình ảnh trong lúc chạy: Iris
+$ lens_manage calib iris
+   rc=0
+$ lens_manage iris-set 100
+IRIS: da ghi target=100
+   rc=0
+$ lens_manage iris-set 50
+IRIS: da ghi target=50
+   rc=0
+$ lens_manage iris-set 0
+IRIS: da ghi target=0
+   rc=0
+
+
+════════════════════════════════════════════════════════════════
+▶ CẦN NGƯỜI TEST ĐÁNH GIÁ  [11.3] Iris
+   Trên stream, iris đóng/mở tương ứng với giá trị 100 -&gt; 50 -&gt; 0 (hình ảnh sáng/tối thay đổi)?
+════════════════════════════════════════════════════════════════
+   -&gt; Nguoi test chon: DAT
+  → PASS  Iris: lệnh chạy rc=0, người test xác nhận hoạt động đúng
+
+[11.4] IR CUT
+  I2C OK: LENS i2c-1 0x1c (1c)
+  Stream: rtsp://192.168.1.249:8900/live -&gt; nhìn cửa sổ video (đặt vật có chi tiết trước camera để đánh giá nét/zoom)
+  Quan sát lens/hình ảnh trong lúc chạy: IR CUT
+$ lens_manage ircut open
+   rc=0
+$ lens_manage ircut close
+   rc=0
+
+
+════════════════════════════════════════════════════════════════
+▶ CẦN NGƯỜI TEST ĐÁNH GIÁ  [11.4] IR CUT
+   Trên stream, IR CUT đóng/mở đúng theo lệnh open -&gt; close (nghe tiếng tách/hình đổi màu-đen trắng)?
+════════════════════════════════════════════════════════════════
+   -&gt; Nguoi test chon: DAT
+  → PASS  IR CUT: lệnh chạy rc=0, người test xác nhận hoạt động đúng
+
+[11.5] Nhiệt độ
+  I2C OK: LENS i2c-1 0x1c (1c)
+  temp: Nhiet do = 46.0 C
+  → PASS  Nhiệt độ lens: Nhiet do = 46.0 C
+
+[11.6] Cảm biến ánh sáng
+  I2C OK: LENS i2c-1 0x1c (1c)
+  light: Anh sang (raw) = 3208
+  → PASS  Cảm biến ánh sáng: Anh sang (raw) = 3208
+
+[11.7] IR LED
+  I2C OK: LENS i2c-1 0x1c (1c)
+  Quan sát lens/hình ảnh trong lúc chạy: IR LED
+$ lens_manage irled on
+   rc=0
+$ lens_manage irled off
+   rc=0
+
+
+════════════════════════════════════════════════════════════════
+▶ CẦN NGƯỜI TEST ĐÁNH GIÁ  [11.7] IR LED
+   IR LED bật/tắt đúng theo lệnh on -&gt; off (hình sáng lên/tối đi trong môi trường tối)?
+════════════════════════════════════════════════════════════════
+   -&gt; Nguoi test chon: DAT
+  → PASS  IR LED: lệnh chạy rc=0, người test xác nhận hoạt động đúng
+
+########## NHÓM: SENSOR ##########
+
+[12.1] Kiểm tra các Sensor
+  → PASS  Thấy đủ sensor: accel gyro mag (370 dòng output)
+
+[12.2] Kiểm tra gia tốc và Gyro
+  → PASS  accel: 519 mẫu/10s, 100% khác 0, x[0.799..0.837] y[-0.359..-0.306] z[9.945..10.079] (rc=0) | gyro: 522 mẫu/10s, 100% khác 0, x[-0.338..0.265] y[0.002..1.494] z[0.049..4.015] (rc=0)
+
+[12.3] Kiểm tra từ trường
+  → PASS  mag: 100 mẫu/10s, 100% khác 0, x[12.862..17.518] y[13.645..17.202] z[-23.792..-19.233] (rc=0)
+
+[12.4] Kiểm tra đọc nhiệt độ và độ ẩm
+  I2C OK: SHT4x i2c-1 0x44 (UU = driver đang giữ)
+  → PASS  T=40.53°C H=30.6% (raw: 40534 / 30642)
+
+[12.5] Kiểm tra nhiệt độ, độ ẩm liên tục
+  I2C OK: SHT4x i2c-1 0x44 (UU = driver đang giữ)
+  → PASS  3/3 lần đọc hợp lệ: [T=40.53°C H=30.6%] [T=40.54°C H=30.6%] [T=40.52°C H=30.7%] (giá trị có thay đổi)
+
+================ TỔNG KẾT ================
+PASS=32  FAIL=14  SKIP=0
+Các mục FAIL:
+  - [3.1] Kiểm tra NVME: Không thấy thiết bị NVMe (lspci chỉ có: 1 thiết bị PCI)
+  - [3.2] Kiểm tra tốc độ ghi của NVME: Không thực hiện được: Không thấy /dev/nvme0n1 (xem 3.1)
+  - [3.3] Kiểm tra tốc độ đọc của NVME: Không thực hiện được: Không thấy /dev/nvme0n1 (xem 3.1)
+  - [4.2] Kiểm tra bắt vệ tinh: Số vệ tinh nhìn thấy = 0 (GPS=0, GLONASS=0)
+  - [4.3] Kiểm tra GNSS Fix: Chưa Fix: fix quality=&#x27;0&#x27;, số vệ tinh dùng=&#x27;0&#x27; (cần đặt ăng-ten nhìn trời)
+  - [4.4] Kiểm tra tọa độ: Chưa có tọa độ hợp lệ (trường vị trí trống hoặc sai định dạng): $GNGGA,005327.094,,,,,0,0,,,M,,M,,*58
+  - [4.5] Kiểm tra trạng thái Navigation: Status=&#x27;V&#x27; (cần A), giờ=&#x27;005327.094&#x27;, ngày=&#x27;060180&#x27;, vị trí=&#x27;&#x27;
+  - [5.4] Kiểm tra giữ time sau khi rút nguồn: Không thực hiện được: Mục rút nguồn/nặng (power,manual) không chạy trong --all, chạy bằng --heavy hoặc --case 5.4
+  - [5.5] Đồng bộ RTC (không internet): Không thực hiện được: Mục rút nguồn/nặng (power,manual) không chạy trong --all, chạy bằng --heavy hoặc --case 5.5
+  - [6.1] Kiểm tra nhận SDCARD: Không thấy /dev/mmcblk* (chưa cắm thẻ SD?)
+  - [6.2] Kiểm tra ghi: Không thực hiện được: Không có SD card (xem 6.1)
+  - [6.3] Kiểm tra đọc: Không thực hiện được: Không có SD card (xem 6.1)
+  - [10.3] WCD - Line In: Người test: file thu AMIC3 bị rè/nhiễu/mất tiếng: mic_3: 5.0s RMS=33 peak=2812;
+  - [10.4] WCD - Line Out: Line Out (WCD): không có âm thanh hoặc rè/nhiễu
+
+                                                          
+      KẾT LUẬN: FAIL      (PASS=32  FAIL=14)      
+                                                          
+
+===== PHỤ LỤC: DỮ LIỆU THÔ CỦA CÁC MỤC =====
+
+### artifacts/alarm_in_gpio.txt
+ gpio56  : in  high func0 16mA pull up
+ gpio88  : in  high func0 16mA pull up
+
+### artifacts/aplay_l.txt
+**** List of PLAYBACK Hardware Devices ****
+card 0: qcs6490rb3gen2v [qcs6490-rb3gen2-vision-snd-card], device 0: CODEC_DMA-LPAIF_WSA-RX-0 multicodec-0 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 0: qcs6490rb3gen2v [qcs6490-rb3gen2-vision-snd-card], device 1: CODEC_DMA-LPAIF_RXTX-RX-0 multicodec-1 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+
+
+### artifacts/arecord_l.txt
+**** List of CAPTURE Hardware Devices ****
+card 0: qcs6490rb3gen2v [qcs6490-rb3gen2-vision-snd-card], device 2: CODEC_DMA-LPAIF_RXTX-TX-3 multicodec-2 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 0: qcs6490rb3gen2v [qcs6490-rb3gen2-vision-snd-card], device 3: CODEC_DMA-LPAIF_VA-TX-0 va_macro_tx1-3 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 0: qcs6490rb3gen2v [qcs6490-rb3gen2-vision-snd-card], device 4: CODEC_DMA-LPAIF_WSA-TX-0 multicodec-4 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+
+
+### artifacts/com_cpu.txt
+8
+
+### artifacts/com_ram.txt
+               total        used        free      shared  buff/cache   available
+Mem:           7.2Gi       1.1Gi       5.4Gi        53Mi       670Mi       6.1Gi
+Swap:          5.3Gi          0B       5.3Gi
+---
+               total        used        free      shared  buff/cache   available
+Mem:         7569308     1160172     5709700       54772      686260     6409136
+Swap:        5543924           0     5543924
+
+### artifacts/com_storage.txt
+sda       8:0    0 117.1G  0 disk 
+|-sda1    8:1    0   512M  0 part /boot
+|-sda2    8:2    0    30M  0 part /var/persist
+`-sda3    8:3    0 116.5G  0 part /var
+---
+125711679488
+
+### artifacts/gps_nmea.txt
+$GNGGA,005313.094,,,,,0,0,,,M,,M,,*5F
+
+$GPGSA,A,1,,,,,,,,,,,,,,,*1E
+
+$GLGSA,A,1,,,,,,,,,,,,,,,*02
+
+$GPGSV,1,1,00*79
+
+$GLGSV,1,1,00*65
+
+$GNRMC,005313.094,V,,,,,0.00,0.00,060180,,,N*55
+
+$GNVTG,0.00,T,,M,0.00,N,0.00,K,N*2C
+
+$GNGGA,005314.094,,,,,0,0,,,M,,M,,*58
+
+$GPGSA,A,1,,,,,,,,,,,,,,,*1E
+
+$GLGSA,A,1,,,,,,,,,,,,,,,*02
+
+$GPGSV,1,1,00*79
+
+$GLGSV,1,1,00*65
+
+$GNRMC,005314.094,V,,,,,0.00,0.00,060180,,,N*52
+
+$GNVTG,0.00,T,,M,0.00,N,0.00,K,N*2C
+
+$GNGGA,005315.094,,,,,0,0,,,M,,M,,*59
+
+$GPGSA,A,1,,,,,,,,,,,,,,,*1E
+
+$GLGSA,A,1,,,,,,,,,,,,,,,*02
+
+$GPGSV,1,1,00*79
+
+$GLGSV,1,1,00*65
+
+$GNRMC,005315.094,V,,,,,0.00,0.00,060180,,,N*53
+
+$GNVTG,0.00,T,,M,0.00,N,0.00,K,N*2C
+
+$GNGGA,005316.094,,,,,0,0,,,M,,M,,*5A
+
+$GPGSA,A,1,,,,,,,,,,,,,,,*1E
+
+$GLGSA,A,1,,,,,,,,,,,,,,,*02
+
+$GPGSV,1,1,00*79
+
+$GLGSV,1,1,00*65
+
+$GNRMC,005316.094,V,,,,,0.00,0.00,060180,,,N*50
+
+$GNVTG,0.00,T,,M,0.00,N,0.00,K,N*2C
+
+$GNGGA,005317.094,,,,,0,0,,,M,,M,,*5B
+
+$GPGSA,A,1,,,,,,,,,,,,,,,*1E
+
+$GLGSA,A,1,,,,,,,,,,,,,,,*02
+
+$GPGSV,1,1,00*79
+
+$GLGSV,1,1,00*65
+
+$GNRMC,005317.094,V,,,,,0.00,0.00,060180,,,N*51
+
+$GNVTG,0.00,T,,M,0.00,N,0.00,K,N*2C
+
+$GNGGA,005318.094,,,,,0,0,,,M,,M,,*54
+
+$GPGSA,A,1,,,,,,,,,,,,,,,*1E
+
+$GLGSA,A,1,,,,,,,,,,,,,,,*02
+
+$GPGSV,1,1,00*79
+
+$GLGSV,1,1,00*65
+
+$GNRMC,005318.094,V,,,,,0.00,0.00,060180,,,N*5E
+
+$GNVTG,0.00,T,,M,0.00,N,0.00,K,N*2C
+
+$GNGGA,005319.094,,,,,0,0,,,M,,M,,*55
+
+$GPGSA,A,1,,,,,,,,,,,,,,,*1E
+
+$GLGSA,A,1,,,,,,,,,,,,,,,*02
+
+$GPGSV,1,1,00*79
+
+$GLGSV,1,1,00*65
+
+$GNRMC,005319.094,V,,,,,0.00,0.00,060180,,,N*5F
+
+$GNVTG,0.00,T,,M,0.00,N,0.00,K,N*2C
+
+$GNGGA,005320.094,,,,,0,0,,,M,,M,,*5F
+
+$GPGSA,A,1,,,,,,,,,,,,,,,*1E
+
+$GLGSA,A,1,,,,,,,,,,,,,,,*02
+
+$GPGSV,1,1,00*79
+
+$GLGSV,1,1,00*65
+
+$GNRMC,005320.094,V,,,,,0.00,0.00,060180,,,N*55
+
+$GNVTG,0.00,T,,M,0.00,N,0.00,K,N*2C
+
+$GNGGA,005321.094,,,,,0,0,,,M,,M,,*5E
+
+$GPGSA,A,1,,,,,,,,,,,,,,,*1E
+
+$GLGSA,A,1,,,,,,,,,,,,,,,*02
+
+$GPGSV,1,1,00*79
+
+$GLGSV,1,1,00*65
+
+$GNRMC,005321.094,V,,,,,0.00,0.00,060180,,,N*54
+
+$GNVTG,0.00,T,,M,0.00,N,0.00,K,N*2C
+
+$GNGGA,005322.094,,,,,0,0,,,M,,M,,*5D
+
+$GPGSA,A,1,,,,,,,,,,,,,,,*1E
+
+$GLGSA,A,1,,,,,,,,,,,,,,,*02
+
+$GPGSV,1,1,00*79
+
+$GLGSV,1,1,00*65
+
+$GNRMC,005322.094,V,,,,,0.00,0.00,060180,,,N*57
+
+$GNVTG,0.00,T,,M,0.00,N,0.00,K,N*2C
+
+$GNGGA,005323.094,,,,,0,0,,,M,,M,,*5C
+
+$GPGSA,A,1,,,,,,,,,,,,,,,*1E
+
+$GLGSA,A,1,,,,,,,,,,,,,,,*02
+
+$GPGSV,1,1,00*79
+
+$GLGSV,1,1,00*65
+
+$GNRMC,005323.094,V,,,,,0.00,0.00,060180,,,N*56
+
+$GNVTG,0.00,T,,M,0.00,N,0.00,K,N*2C
+
+$GNGGA,005324.094,,,,,0,0,,,M,,M,,*5B
+
+$GPGSA,A,1,,,,,,,,,,,,,,,*1E
+
+$GLGSA,A,1,,,,,,,,,,,,,,,*02
+
+$GPGSV,1,1,00*79
+
+$GLGSV,1,1,00*65
+
+$GNRMC,005324.094,V,,,,,0.00,0.00,060180,,,N*51
+
+$GNVTG,0.00,T,,M,0.00,N,0.00,K,N*2C
+
+$GNGGA,005325.094,,,,,0,0,,,M,,M,,*5A
+
+$GPGSA,A,1,,,,,,,,,,,,,,,*1E
+
+$GLGSA,A,1,,,,,,,,,,,,,,,*02
+
+$GPGSV,1,1,00*79
+
+$GLGSV,1,1,00*65
+
+$GNRMC,005325.094,V,,,,,0.00,0.00,060180,,,N*50
+
+$GNVTG,0.00,T,,M,0.00,N,0.00,K,N*2C
+
+$GNGGA,005326.094,,,,,0,0,,,M,,M,,*59
+
+$GPGSA,A,1,,,,,,,,,,,,,,,*1E
+
+$GLGSA,A,1,,,,,,,,,,,,,,,*02
+
+$GPGSV,1,1,00*79
+
+$GLGSV,1,1,00*65
+
+$GNRMC,005326.094,V,,,,,0.00,0.00,060180,,,N*53
+
+$GNVTG,0.00,T,,M,0.00,N,0.00,K,N*2C
+
+$GNGGA,005327.094,,,,,0,0,,,M,,M,,*58
+
+$GPGSA,A,1,,,,,,,,,,,,,,,*1E
+
+$GLGSA,A,1,,,,,,,,,,,,,,,*02
+
+$GPGSV,1,1,00*79
+
+$GLGSV,1,1,00*65
+
+$GNRMC,005327.094,V,,,,,0.00,0.00,060180,,,N*52
+
+$GNVTG,0.00,T,,M,0.00,N,0.00,K,N*2C
+
+### artifacts/gst_cam_1080p.jpg.log
+failed to get driver name for fd 3
+MESA-LOADER: failed to retrieve device information
+failed to get driver name for fd 3
+Setting pipeline to PAUSED ...
+Pipeline is live and does not need PREROLL ...
+Redistribute latency...
+Pipeline is PREROLLED ...
+Setting pipeline to PLAYING ...
+New clock: GstSystemClock
+Redistribute latency...
+0:00:00.8 / 99:99:99.0:00:00.9 / 99:99:99.0:00:01.0 / 99:99:99.0:00:01.1 / 99:99:99.0:00:01.2 / 99:99:99.0:00:01.3 / 99:99:99.0:00:01.4 / 99:99:99.0:00:01.5 / 99:99:99.0:00:01.6 / 99:99:99.0:00:01.7 / 99:99:99.0:00:01.8 / 99:99:99.0:00:01.9 / 99:99:99.0:00:02.0 / 99:99:99.0:00:02.1 / 99:99:99.0:00:02.2 / 99:99:99.0:00:02.3 / 99:99:99.0:00:02.5 / 99:99:99.0:00:02.6 / 99:99:99.0:00:02.7 / 99:99:99.0:00:02.8 / 99:99:99.0:00:02.9 / 99:99:99.0:00:03.0 / 99:99:99.0:00:03.1 / 99:99:99.0:00:03.2 / 99:99:99.0:00:03.3 / 99:99:99.0:00:03.4 / 99:99:99.0:00:03.5 / 99:99:99.0:00:03.6 / 99:99:99.0:00:03.7 / 99:99:99.0:00:03.8 / 99:99:99.0:00:03.9 / 99:99:99.0:00:04.0 / 99:99:99.0:00:04.1 / 99:99:99.0:00:04.2 / 99:99:99.0:00:04.3 / 99:99:99.0:00:04.4 / 99:99:99.0:00:04.5 / 99:99:99.0:00:04.6 / 99:99:99.0:00:04.7 / 99:99:99.0:00:04.8 / 99:99:99.handling interrupt.
+Interrupt: Stopping pipeline ...
+EOS on shutdown enabled -- Forcing EOS on the pipeline
+Waiting for EOS...
+Got EOS from element &quot;pipeline0&quot;.
+EOS received - stopping pipeline...
+Execution ended after 0:00:04.931855298
+Setting pipeline to NULL ...
+Freeing pipeline ...
+LASTFILE=/tmp/mmi_cam_1080p_118.jpg
+
+### artifacts/gst_cam_1080p.mp4.log
+failed to get driver name for fd 3
+MESA-LOADER: failed to retrieve device information
+failed to get driver name for fd 3
+Setting pipeline to PAUSED ...
+Pipeline is live and does not need PREROLL ...
+Redistribute latency...
+Pipeline is PREROLLED ...
+Setting pipeline to PLAYING ...
+New clock: GstSystemClock
+Redistribute latency...
+Redistribute latency...
+0:00:00.9 / 99:99:99.0:00:01.0 / 99:99:99.0:00:01.1 / 99:99:99.0:00:01.2 / 99:99:99.0:00:01.3 / 99:99:99.0:00:01.4 / 99:99:99.0:00:01.5 / 99:99:99.0:00:01.6 / 99:99:99.0:00:01.7 / 99:99:99.0:00:01.8 / 99:99:99.0:00:01.9 / 99:99:99.0:00:02.0 / 99:99:99.0:00:02.1 / 99:99:99.0:00:02.2 / 99:99:99.0:00:02.3 / 99:99:99.0:00:02.4 / 99:99:99.0:00:02.5 / 99:99:99.0:00:02.6 / 99:99:99.0:00:02.7 / 99:99:99.0:00:02.8 / 99:99:99.0:00:02.9 / 99:99:99.0:00:03.0 / 99:99:99.0:00:03.1 / 99:99:99.0:00:03.2 / 99:99:99.0:00:03.3 / 99:99:99.0:00:03.4 / 99:99:99.0:00:03.5 / 99:99:99.0:00:03.6 / 99:99:99.0:00:03.7 / 99:99:99.0:00:03.8 / 99:99:99.0:00:03.9 / 99:99:99.0:00:04.0 / 99:99:99.0:00:04.1 / 99:99:99.0:00:04.2 / 99:99:99.0:00:04.3 / 99:99:99.0:00:04.4 / 99:99:99.0:00:04.5 / 99:99:99.0:00:04.6 / 99:99:99.0:00:04.7 / 99:99:99.0:00:04.8 / 99:99:99.handling interrupt.
+Interrupt: Stopping pipeline ...
+EOS on shutdown enabled -- Forcing EOS on the pipeline
+Waiting for EOS...
+Got EOS from element &quot;pipeline0&quot;.
+EOS received - stopping pipeline...
+Execution ended after 0:00:04.889435541
+Setting pipeline to NULL ...
+Freeing pipeline ...
+LASTFILE=/tmp/mmi_cam_1080p.mp4
+
+### artifacts/gst_cam_4k.jpg.log
+failed to get driver name for fd 3
+MESA-LOADER: failed to retrieve device information
+failed to get driver name for fd 3
+Setting pipeline to PAUSED ...
+Pipeline is live and does not need PREROLL ...
+Redistribute latency...
+Pipeline is PREROLLED ...
+Setting pipeline to PLAYING ...
+New clock: GstSystemClock
+Redistribute latency...
+0:00:01.0 / 99:99:99.0:00:01.1 / 99:99:99.0:00:01.2 / 99:99:99.0:00:01.3 / 99:99:99.0:00:01.4 / 99:99:99.0:00:01.5 / 99:99:99.0:00:01.6 / 99:99:99.0:00:01.7 / 99:99:99.0:00:01.8 / 99:99:99.0:00:01.9 / 99:99:99.0:00:02.0 / 99:99:99.0:00:02.1 / 99:99:99.0:00:02.2 / 99:99:99.0:00:02.3 / 99:99:99.0:00:02.4 / 99:99:99.0:00:02.5 / 99:99:99.0:00:02.6 / 99:99:99.0:00:02.7 / 99:99:99.0:00:02.8 / 99:99:99.0:00:02.9 / 99:99:99.0:00:03.0 / 99:99:99.0:00:03.1 / 99:99:99.0:00:03.2 / 99:99:99.0:00:03.3 / 99:99:99.0:00:03.4 / 99:99:99.0:00:03.5 / 99:99:99.0:00:03.6 / 99:99:99.0:00:03.7 / 99:99:99.0:00:03.8 / 99:99:99.0:00:03.9 / 99:99:99.0:00:04.0 / 99:99:99.0:00:04.1 / 99:99:99.0:00:04.2 / 99:99:99.0:00:04.3 / 99:99:99.0:00:04.4 / 99:99:99.0:00:04.5 / 99:99:99.0:00:04.6 / 99:99:99.0:00:04.7 / 99:99:99.0:00:04.8 / 99:99:99.handling interrupt.
+Interrupt: Stopping pipeline ...
+EOS on shutdown enabled -- Forcing EOS on the pipeline
+Waiting for EOS...
+Got EOS from element &quot;pipeline0&quot;.
+EOS received - stopping pipeline...
+Execution ended after 0:00:04.961217046
+Setting pipeline to NULL ...
+Freeing pipeline ...
+LASTFILE=/tmp/mmi_cam_4k_117.jpg
+
+### artifacts/gst_cam_4k.mp4.log
+failed to get driver name for fd 3
+MESA-LOADER: failed to retrieve device information
+failed to get driver name for fd 3
+Setting pipeline to PAUSED ...
+Pipeline is live and does not need PREROLL ...
+Redistribute latency...
+Pipeline is PREROLLED ...
+Setting pipeline to PLAYING ...
+New clock: GstSystemClock
+Redistribute latency...
+Redistribute latency...
+0:00:01.0 / 99:99:99.0:00:01.1 / 99:99:99.0:00:01.2 / 99:99:99.0:00:01.3 / 99:99:99.0:00:01.4 / 99:99:99.0:00:01.5 / 99:99:99.0:00:01.6 / 99:99:99.0:00:01.7 / 99:99:99.0:00:01.8 / 99:99:99.0:00:01.9 / 99:99:99.0:00:02.0 / 99:99:99.0:00:02.1 / 99:99:99.0:00:02.2 / 99:99:99.0:00:02.3 / 99:99:99.0:00:02.4 / 99:99:99.0:00:02.5 / 99:99:99.0:00:02.6 / 99:99:99.0:00:02.7 / 99:99:99.0:00:02.8 / 99:99:99.0:00:02.9 / 99:99:99.0:00:03.0 / 99:99:99.0:00:03.1 / 99:99:99.0:00:03.2 / 99:99:99.0:00:03.3 / 99:99:99.0:00:03.4 / 99:99:99.0:00:03.5 / 99:99:99.0:00:03.6 / 99:99:99.0:00:03.7 / 99:99:99.0:00:03.8 / 99:99:99.0:00:03.9 / 99:99:99.0:00:04.0 / 99:99:99.0:00:04.1 / 99:99:99.0:00:04.2 / 99:99:99.0:00:04.3 / 99:99:99.0:00:04.4 / 99:99:99.0:00:04.5 / 99:99:99.0:00:04.6 / 99:99:99.0:00:04.7 / 99:99:99.handling interrupt.
+Interrupt: Stopping pipeline ...
+EOS on shutdown enabled -- Forcing EOS on the pipeline
+Waiting for EOS...
+0:00:04.8 / 99:99:99.Got EOS from element &quot;pipeline0&quot;.
+EOS received - stopping pipeline...
+Execution ended after 0:00:04.909057226
+Setting pipeline to NULL ...
+Freeing pipeline ...
+LASTFILE=/tmp/mmi_cam_4k.mp4
+
+### artifacts/lens_light.txt
+Anh sang (raw) = 3208
+
+### artifacts/lens_temp.txt
+Nhiet do = 46.0 C
+
+### artifacts/nvme_lspci.txt
+0001:00:00.0 &quot;PCI bridge&quot; &quot;Qualcomm Technologies, Inc&quot; &quot;SM8250 PCIe Root Complex [Snapdragon 865/870 5G]&quot; -p00 &quot;&quot; &quot;&quot;
+
+### artifacts/rtc_dmesg.txt
+[    0.454133] rtc-pcf8563 1-0051: low voltage detected, date/time is not reliable.
+[    0.454632] rtc-pcf8563 1-0051: registered as rtc0
+[    0.455873] rtc-pcf8563 1-0051: low voltage detected, date/time is not reliable.
+[    0.455877] rtc-pcf8563 1-0051: hctosys: unable to read the hardware clock
+[   12.496937] rtc-pm8xxx c440000.spmi:pmic@0:rtc@6100: registered as rtc1
+
+### artifacts/rtc_set.txt
+W_RC=0
+2026-01-27 08:49:01.398404+00:00
+R_RC=0
+
+### artifacts/rtsp_ffmpeg_1920x1080.log
+[h264 @ 0x56433b2a4300] non-existing PPS 0 referenced
+    Last message repeated 1 times
+[h264 @ 0x56433b2a4300] decode_slice_header error
+[h264 @ 0x56433b2a4300] no frame!
+[h264 @ 0x56433b2a4300] non-existing PPS 0 referenced
+    Last message repeated 1 times
+[h264 @ 0x56433b2a4300] decode_slice_header error
+[h264 @ 0x56433b2a4300] no frame!
+[h264 @ 0x56433b2a4300] non-existing PPS 0 referenced
+    Last message repeated 1 times
+[h264 @ 0x56433b2a4300] decode_slice_header error
+[h264 @ 0x56433b2a4300] no frame!
+[h264 @ 0x56433b2a4300] non-existing PPS 0 referenced
+    Last message repeated 1 times
+[h264 @ 0x56433b2a4300] decode_slice_header error
+[h264 @ 0x56433b2a4300] no frame!
+[h264 @ 0x56433b2a4300] non-existing PPS 0 referenced
+    Last message repeated 1 times
+[h264 @ 0x56433b2a4300] decode_slice_header error
+[h264 @ 0x56433b2a4300] no frame!
+Input #0, rtsp, from &#x27;rtsp://192.168.1.249:8900/live&#x27;:
+  Metadata:
+    title           : Session streamed with GStreamer
+    comment         : rtsp-server
+  Duration: N/A, start: 0.033333, bitrate: N/A
+  Stream #0:0: Video: h264 (Baseline), yuv420p(tv, smpte170m/smpte170m/bt709, progressive), 1920x1080, 30 fps, 30 tbr, 90k tbn, 180k tbc
+Stream mapping:
+  Stream #0:0 -&gt; #0:0 (h264 (native) -&gt; wrapped_avframe (native))
+Output #0, null, to &#x27;pipe:&#x27;:
+  Metadata:
+    title           : Session streamed with GStreamer
+    comment         : rtsp-server
+    encoder         : Lavf58.76.100
+  Stream #0:0: Video: wrapped_avframe, yuv420p(tv, smpte170m/smpte170m/bt709, progressive), 1920x1080, q=2-31, 200 kb/s, 30 fps, 30 tbn
+    Metadata:
+      encoder         : Lavc58.134.100 wrapped_avframe
+frame=    1 fps=0.0 q=-0.0 size=N/A time=00:00:00.16 bitrate=N/A speed=4.94x    
+frame=   34 fps=0.0 q=-0.0 size=N/A time=00:00:01.26 bitrate=N/A speed=2.26x    
+frame=   49 fps= 46 q=-0.0 size=N/A time=00:00:01.76 bitrate=N/A speed=1.66x    
+frame=   65 fps= 41 q=-0.0 size=N/A time=00:00:02.30 bitrate=N/A speed=1.44x    
+frame=   81 fps= 38 q=-0.0 size=N/A time=00:00:02.83 bitrate=N/A speed=1.33x    
+[h264 @ 0x56433b2be6c0] corrupted macroblock 32 62 (total_coeff=-1)
+[h264 @ 0x56433b2be6c0] error while decoding MB 32 62
+[h264 @ 0x56433b2be6c0] concealing 737 DC, 737 AC, 737 MV errors in I frame
+frame=   96 fps= 36 q=-0.0 size=N/A time=00:00:03.33 bitrate=N/A speed=1.27x    
+[h264 @ 0x56433b2bc680] out of range intra chroma pred mode
+[h264 @ 0x56433b2bc680] error while decoding MB 101 61
+[h264 @ 0x56433b2bc680] concealing 788 DC, 788 AC, 788 MV errors in I frame
+rtsp://192.168.1.249:8900/live: corrupt decoded frame in stream 0
+    Last message repeated 1 times
+frame=  112 fps= 35 q=-0.0 size=N/A time=00:00:03.86 bitrate=N/A speed=1.22x    
+[h264 @ 0x56433b460ec0] corrupted macroblock 61 61 (total_coeff=-1)
+[h264 @ 0x56433b460ec0] error while decoding MB 61 61
+[h264 @ 0x56433b460ec0] concealing 828 DC, 828 AC, 828 MV errors in I frame
+frame=  127 fps= 35 q=-0.0 size=N/A time=00:00:04.36 bitrate=N/A speed=1.19x    
+rtsp://192.168.1.249:8900/live: corrupt decoded frame in stream 0
+frame=  143 fps= 34 q=-0.0 size=N/A time=00:00:04.90 bitrate=N/A speed=1.17x    
+[h264 @ 0x56433b4e5e80] Invalid level prefix
+[h264 @ 0x56433b4e5e80] error while decoding MB 90 65
+[h264 @ 0x56433b4e5e80] concealing 319 DC, 319 AC, 319 MV errors in I frame
+[h264 @ 0x56433b3e16c0] cbp too large (3199971767) at 55 56
+[h264 @ 0x56433b3e16c0] error while decoding MB 55 56
+[h264 @ 0x56433b3e16c0] concealing 1434 DC, 1434 AC, 1434 MV errors in I frame
+rtsp://192.168.1.249:8900/live: corrupt decoded frame in stream 0
+frame=  158 fps= 34 q=-0.0 size=N/A time=00:00:05.40 bitrate=N/A speed=1.15x    
+[h264 @ 0x56433b569dc0] corrupted macroblock 41 59 (total_coeff=-1)
+[h264 @ 0x56433b569dc0] error while decoding MB 41 59
+[h264 @ 0x56433b569dc0] concealing 1088 DC, 1088 AC, 1088 MV errors in I frame
+rtsp://192.168.1.249:8900/live: corrupt decoded frame in stream 0
+frame=  174 fps= 33 q=-0.0 size=N/A time=00:00:05.93 bitrate=N/A speed=1.14x    
+[h264 @ 0x56433b2b6cc0] out of range intra chroma pred mode
+[h264 @ 0x56433b2b6cc0] error while decoding MB 8 56
+[h264 @ 0x56433b2b6cc0] concealing 1481 DC, 1481 AC, 1481 MV errors in I frame
+rtsp://192.168.1.249:8900/live: corrupt decoded frame in stream 0
+frame=  176 fps= 33 q=-0.0 Lsize=N/A time=00:00:06.00 bitrate=N/A speed=1.12x    
+video:92kB audio:0kB subtitle:0kB other streams:0kB global headers:0kB muxing overhead: unknown
+
+### artifacts/rtsp_ffmpeg_3840x2160.log
+[h264 @ 0x55b1656cc300] non-existing PPS 0 referenced
+    Last message repeated 1 times
+[h264 @ 0x55b1656cc300] decode_slice_header error
+[h264 @ 0x55b1656cc300] no frame!
+[h264 @ 0x55b1656cc300] non-existing PPS 0 referenced
+    Last message repeated 1 times
+[h264 @ 0x55b1656cc300] decode_slice_header error
+[h264 @ 0x55b1656cc300] no frame!
+[h264 @ 0x55b1656cc300] non-existing PPS 0 referenced
+    Last message repeated 1 times
+[h264 @ 0x55b1656cc300] decode_slice_header error
+[h264 @ 0x55b1656cc300] no frame!
+[h264 @ 0x55b1656cc300] non-existing PPS 0 referenced
+    Last message repeated 1 times
+[h264 @ 0x55b1656cc300] decode_slice_header error
+[h264 @ 0x55b1656cc300] no frame!
+[h264 @ 0x55b1656cc300] non-existing PPS 0 referenced
+    Last message repeated 1 times
+[h264 @ 0x55b1656cc300] decode_slice_header error
+[h264 @ 0x55b1656cc300] no frame!
+Input #0, rtsp, from &#x27;rtsp://192.168.1.249:8900/live&#x27;:
+  Metadata:
+    title           : Session streamed with GStreamer
+    comment         : rtsp-server
+  Duration: N/A, start: 0.033333, bitrate: N/A
+  Stream #0:0: Video: h264 (Baseline), yuv420p(tv, smpte170m/smpte170m/bt709, progressive), 3840x2160, 30 fps, 30 tbr, 90k tbn, 180k tbc
+Stream mapping:
+  Stream #0:0 -&gt; #0:0 (h264 (native) -&gt; wrapped_avframe (native))
+Output #0, null, to &#x27;pipe:&#x27;:
+  Metadata:
+    title           : Session streamed with GStreamer
+    comment         : rtsp-server
+    encoder         : Lavf58.76.100
+  Stream #0:0: Video: wrapped_avframe, yuv420p(tv, smpte170m/smpte170m/bt709, progressive), 3840x2160, q=2-31, 200 kb/s, 30 fps, 30 tbn
+    Metadata:
+      encoder         : Lavc58.134.100 wrapped_avframe
+frame=    1 fps=0.0 q=-0.0 size=N/A time=00:00:00.16 bitrate=N/A speed=1.44x    
+[h264 @ 0x55b16597fe80] corrupted macroblock 115 134 (total_coeff=-1)
+[h264 @ 0x55b16597fe80] error while decoding MB 115 134
+[h264 @ 0x55b16597fe80] concealing 174 DC, 174 AC, 174 MV errors in I frame
+rtsp://192.168.1.249:8900/live: corrupt decoded frame in stream 0
+[h264 @ 0x55b1657b54c0] Invalid level prefix
+[h264 @ 0x55b1657b54c0] error while decoding MB 109 116
+[h264 @ 0x55b1657b54c0] concealing 4500 DC, 4500 AC, 4500 MV errors in I frame
+frame=   36 fps=0.0 q=-0.0 size=N/A time=00:00:01.33 bitrate=N/A speed=2.12x    
+rtsp://192.168.1.249:8900/live: corrupt decoded frame in stream 0
+frame=   52 fps= 45 q=-0.0 size=N/A time=00:00:01.86 bitrate=N/A speed=1.61x    
+[h264 @ 0x55b1658e3240] negative number of zero coeffs at 162 117
+[h264 @ 0x55b1658e3240] error while decoding MB 162 117
+[h264 @ 0x55b1658e3240] concealing 4207 DC, 4207 AC, 4207 MV errors in I frame
+[h264 @ 0x55b165901900] corrupted macroblock 8 133 (total_coeff=-1)
+[h264 @ 0x55b165901900] error while decoding MB 8 133
+[h264 @ 0x55b165901900] concealing 521 DC, 521 AC, 521 MV errors in I frame
+rtsp://192.168.1.249:8900/live: corrupt decoded frame in stream 0
+frame=   67 fps= 40 q=-0.0 size=N/A time=00:00:02.36 bitrate=N/A speed=1.42x    
+[h264 @ 0x55b16570b2c0] Invalid level prefix
+[h264 @ 0x55b16570b2c0] error while decoding MB 176 122
+[h264 @ 0x55b16570b2c0] concealing 2993 DC, 2993 AC, 2993 MV errors in I frame
+rtsp://192.168.1.249:8900/live: corrupt decoded frame in stream 0
+frame=   83 fps= 38 q=-0.0 size=N/A time=00:00:02.90 bitrate=N/A speed=1.32x    
+[h264 @ 0x55b1656e66c0] Invalid level prefix
+[h264 @ 0x55b1656e66c0] error while decoding MB 131 116
+[h264 @ 0x55b1656e66c0] concealing 4478 DC, 4478 AC, 4478 MV errors in I frame
+rtsp://192.168.1.249:8900/live: corrupt decoded frame in stream 0
+frame=   98 fps= 36 q=-0.0 size=N/A time=00:00:03.40 bitrate=N/A speed=1.26x    
+rtsp://192.168.1.249:8900/live: corrupt decoded frame in stream 0
+[h264 @ 0x55b1657d2180] corrupted macroblock 117 117 (total_coeff=-1)
+[h264 @ 0x55b1657d2180] error while decoding MB 117 117
+[h264 @ 0x55b1657d2180] concealing 4252 DC, 4252 AC, 4252 MV errors in I frame
+rtsp://192.168.1.249:8900/live: corrupt decoded frame in stream 0
+frame=  113 fps= 35 q=-0.0 size=N/A time=00:00:03.90 bitrate=N/A speed=1.22x    
+[h264 @ 0x55b16575eec0] corrupted macroblock 117 117 (total_coeff=-1)
+[h264 @ 0x55b16575eec0] error while decoding MB 117 117
+[h264 @ 0x55b16575eec0] concealing 4252 DC, 4252 AC, 4252 MV errors in I frame
+frame=  129 fps= 35 q=-0.0 size=N/A time=00:00:04.43 bitrate=N/A speed=1.19x    
+[h264 @ 0x55b1656e0640] corrupted macroblock 161 117 (total_coeff=-1)
+[h264 @ 0x55b1656e0640] error while decoding MB 161 117
+[h264 @ 0x55b1656e0640] concealing 4208 DC, 4208 AC, 4208 MV errors in I frame
+rtsp://192.168.1.249:8900/live: corrupt decoded frame in stream 0
+    Last message repeated 1 times
+frame=  144 fps= 34 q=-0.0 size=N/A time=00:00:04.93 bitrate=N/A speed=1.17x    
+[h264 @ 0x55b1658fad80] out of range intra chroma pred mode
+[h264 @ 0x55b1658fad80] error while decoding MB 215 123
+[h264 @ 0x55b1658fad80] concealing 2714 DC, 2714 AC, 2714 MV errors in I frame
+[h264 @ 0x55b16597fe80] Invalid level prefix
+[h264 @ 0x55b16597fe80] error while decoding MB 171 122
+[h264 @ 0x55b16597fe80] concealing 2998 DC, 2998 AC, 2998 MV errors in I frame
+rtsp://192.168.1.249:8900/live: corrupt decoded frame in stream 0
+frame=  160 fps= 34 q=-0.0 size=N/A time=00:00:05.46 bitrate=N/A speed=1.15x    
+rtsp://192.168.1.249:8900/live: corrupt decoded frame in stream 0
+[h264 @ 0x55b1657eee40] concealing 2701 DC, 2701 AC, 2701 MV errors in I frame
+frame=  176 fps= 33 q=-0.0 size=N/A time=00:00:06.00 bitrate=N/A speed=1.13x    
+rtsp://192.168.1.249:8900/live: corrupt decoded frame in stream 0
+[h264 @ 0x55b1657b54c0] corrupted macroblock 153 117 (total_coeff=-1)
+[h264 @ 0x55b1657b54c0] error while decoding MB 153 117
+frame=  176 fps= 33 q=-0.0 Lsize=N/A time=00:00:06.00 bitrate=N/A speed=1.12x    
+video:92kB audio:0kB subtitle:0kB other streams:0kB global headers:0kB muxing overhead: unknown
+[h264 @ 0x55b1657b54c0] concealing 4216 DC, 4216 AC, 4216 MV errors in I frame
+
+### artifacts/rtsp_start_1920x1080.log
+RTSP_PID_OK
+
+### artifacts/rtsp_start_3840x2160.log
+RTSP_PID_OK
+
+### artifacts/sd_ls_dev.txt
+ls: /dev/mmcblk*: No such file or directory
+
+### artifacts/see_accel.txt
+see_workhorse version 2.15
+04:04:07.933 see_workhorse -sensor=accel -sample_rate=50 -duration=10 -display_events=1 
+begin usta_get_sensor_list
+diag: Diag_LSM_Init: invoked for pid: 13361 with init_count: 0
+diag:successfully connected to socket 11
+diag: Diag_LSM_Init: done for pid: 13361 with init_count: 1
+end   usta_get_sensor_list
+por file: /etc/sensors/por_spec.txt not found.
+04:04:08.032 psalt-&gt;begin() took 98 milliseconds
+04:04:08.032 get_sensor_suid( diag_sensor)
+04:04:08.032 + diag_sensor suid = [high 1292e618203987b5, low 94436fa912689085]
+04:04:08.032 get_sensor_suid( delta_angle)
+04:04:08.032 lookup: accel
+04:04:08.032 suid = [high 2a82a283812ab5b6, low 5847d40e0aca2b38]
+04:04:08.032 -sensor=accel -rigid_body=[display]  found suid = 0x2a82a283812ab5b65847d40e0aca2b38
+04:04:08.032 is NOT POR.
+04:04:08.032 has max_rate: 416 hz
+04:04:08.032 begin iteration: 1
+04:04:08.032 stream_sensor( accel)
+04:04:08.032 + sample_rate: 50.000000 hz
+04:04:08.036 config_stream_sensor() complete rc 0
+04:04:08.036 sleep(10) seconds
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0x5847d40e0aca2b38&quot;,
+  &quot;suid_high&quot; : &quot;0x2a82a283812ab5b6&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 768,
+   &quot;timestamp&quot; : 67135955789,
+   &quot;payload&quot; : {
+    &quot;sample_rate&quot; : 0.000000,
+    &quot;water_mark&quot; : 0,
+    &quot;range&quot; : [
+     -16.000000,
+     16.000000
+    ],
+    &quot;resolution&quot; : 0.488000,
+    &quot;operation_mode&quot; : &quot;HIGH_PERF&quot;,
+    &quot;active_current&quot; : 240,
+    &quot;stream_is_synchronous&quot; : 0
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 1,
+&quot;Time Elapsed&quot; : 0
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0x5847d40e0aca2b38&quot;,
+  &quot;suid_high&quot; : &quot;0x2a82a283812ab5b6&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1022,
+   &quot;timestamp&quot; : 67135956479,
+   &quot;payload&quot; : {
+    &quot;bias&quot; : [
+     0.000000,
+     0.000000,
+     0.000000
+    ],
+    &quot;comp_matrix&quot; : [
+     1.000000,
+     0.000000,
+     0.000000,
+     0.000000,
+     1.000000,
+     0.000000,
+     0.000000,
+     0.000000,
+     1.000000
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 2,
+&quot;Time Elapsed&quot; : 0
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0x5847d40e0aca2b38&quot;,
+  &quot;suid_high&quot; : &quot;0x2a82a283812ab5b6&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 768,
+   &quot;timestamp&quot; : 67135994995,
+   &quot;payload&quot; : {
+    &quot;sample_rate&quot; : 52.000000,
+    &quot;water_mark&quot; : 1,
+    &quot;range&quot; : [
+     -16.000000,
+     16.000000
+    ],
+    &quot;resolution&quot; : 0.488000,
+    &quot;operation_mode&quot; : &quot;HIGH_PERF&quot;,
+    &quot;active_current&quot; : 240,
+    &quot;stream_is_synchronous&quot; : 0
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 3,
+&quot;Time Elapsed&quot; : 0
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0x5847d40e0aca2b38&quot;,
+  &quot;suid_high&quot; : &quot;0x2a82a283812ab5b6&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1022,
+   &quot;timestamp&quot; : 67135995595,
+   &quot;payload&quot; : {
+    &quot;bias&quot; : [
+     0.000000,
+     0.000000,
+     0.000000
+    ],
+    &quot;comp_matrix&quot; : [
+     1.000000,
+     0.000000,
+     0.000000,
+     0.000000,
+     1.000000,
+     0.000000,
+     0.000000,
+     0.000000,
+     1.000000
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 4,
+&quot;Time Elapsed&quot; : 0
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0x5847d40e0aca2b38&quot;,
+  &quot;suid_high&quot; : &quot;0x2a82a283812ab5b6&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1025,
+   &quot;timestamp&quot; : 67136175868,
+   &quot;payload&quot; : {
+    &quot;data&quot; : [
+     0.818345,
+     -0.306281,
+     9.944571
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_UNRELIABLE&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 5,
+&quot;Time Elapsed&quot; : 0
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0x5847d40e0aca2b38&quot;,
+  &quot;suid_high&quot; : &quot;0x2a82a283812ab5b6&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1025,
+   &quot;timestamp&quot; : 67136553149,
+   &quot;payload&quot; : {
+    &quot;data&quot; : [
+     0.823131,
+     -0.334995,
+     10.035498
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_UNRELIABLE&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 6,
+&quot;Time Elapsed&quot; : 0
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0x5847d40e0aca2b38&quot;,
+... (cắt bớt, tổng 12615 dòng) ...
+  {
+   &quot;msg_id&quot; : 1025,
+   &quot;timestamp&quot; : 67326229639,
+   &quot;payload&quot; : {
+    &quot;data&quot; : [
+     0.823131,
+     -0.334995,
+     10.068998
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 520,
+&quot;Time Elapsed&quot; : 9
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0x5847d40e0aca2b38&quot;,
+  &quot;suid_high&quot; : &quot;0x2a82a283812ab5b6&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1025,
+   &quot;timestamp&quot; : 67326598662,
+   &quot;payload&quot; : {
+    &quot;data&quot; : [
+     0.827917,
+     -0.334995,
+     10.059426
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 521,
+&quot;Time Elapsed&quot; : 9
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0x5847d40e0aca2b38&quot;,
+  &quot;suid_high&quot; : &quot;0x2a82a283812ab5b6&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1025,
+   &quot;timestamp&quot; : 67326967698,
+   &quot;payload&quot; : {
+    &quot;data&quot; : [
+     0.808774,
+     -0.339781,
+     10.059426
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 522,
+&quot;Time Elapsed&quot; : 10
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0x5847d40e0aca2b38&quot;,
+  &quot;suid_high&quot; : &quot;0x2a82a283812ab5b6&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1025,
+   &quot;timestamp&quot; : 67327336747,
+   &quot;payload&quot; : {
+    &quot;data&quot; : [
+     0.823131,
+     -0.334995,
+     10.049855
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 523,
+&quot;Time Elapsed&quot; : 10
+}
+04:04:18.037 awoke
+04:04:18.037 disable_sensor( accel)
+04:04:18.040 disable_sensor() complete rc 0
+04:04:18.040 end iteration: 1
+04:04:18.040 sleep(1) seconds
+04:04:19.041 awoke
+04:04:19.041 PASS see_workhorse -sensor=accel -sample_rate=50 -duration=10 -display_events=1 
+PASS see_workhorse -sensor=accel -sample_rate=50 -duration=10 -display_events=1 
+04:04:19.041 begin delete psalt
+04:04:19.055 end delete psalt
+RC=0
+
+### artifacts/see_gyro.txt
+see_workhorse version 2.15
+04:04:19.256 see_workhorse -sensor=gyro -sample_rate=50 -duration=10 -display_events=1 
+begin usta_get_sensor_list
+diag: Diag_LSM_Init: invoked for pid: 13441 with init_count: 0
+diag:successfully connected to socket 11
+diag: Diag_LSM_Init: done for pid: 13441 with init_count: 1
+end   usta_get_sensor_list
+por file: /etc/sensors/por_spec.txt not found.
+04:04:19.352 psalt-&gt;begin() took 96 milliseconds
+04:04:19.352 get_sensor_suid( diag_sensor)
+04:04:19.353 + diag_sensor suid = [high 1292e618203987b5, low 94436fa912689085]
+04:04:19.353 get_sensor_suid( delta_angle)
+04:04:19.353 lookup: gyro
+04:04:19.353 suid = [high 11ea006282d7f9c, low be4bfe881113e717]
+04:04:19.353 -sensor=gyro -rigid_body=[display]  found suid = 0x011ea006282d7f9cbe4bfe881113e717
+04:04:19.353 is NOT POR.
+04:04:19.353 has max_rate: 416 hz
+04:04:19.353 begin iteration: 1
+04:04:19.353 stream_sensor( gyro)
+04:04:19.353 + sample_rate: 50.000000 hz
+04:04:19.357 config_stream_sensor() complete rc 0
+04:04:19.357 sleep(10) seconds
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0xbe4bfe881113e717&quot;,
+  &quot;suid_high&quot; : &quot;0x11ea006282d7f9c&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 768,
+   &quot;timestamp&quot; : 67353227517,
+   &quot;payload&quot; : {
+    &quot;sample_rate&quot; : 0.000000,
+    &quot;water_mark&quot; : 0,
+    &quot;range&quot; : [
+     -2000.000000,
+     2000.000000
+    ],
+    &quot;resolution&quot; : 0.070000,
+    &quot;operation_mode&quot; : &quot;HIGH_PERF&quot;,
+    &quot;active_current&quot; : 1250,
+    &quot;stream_is_synchronous&quot; : 0
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 1,
+&quot;Time Elapsed&quot; : 0
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0xbe4bfe881113e717&quot;,
+  &quot;suid_high&quot; : &quot;0x11ea006282d7f9c&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1022,
+   &quot;timestamp&quot; : 67353228193,
+   &quot;payload&quot; : {
+    &quot;bias&quot; : [
+     0.000000,
+     0.000000,
+     0.000000
+    ],
+    &quot;comp_matrix&quot; : [
+     1.000000,
+     0.000000,
+     0.000000,
+     0.000000,
+     1.000000,
+     0.000000,
+     0.000000,
+     0.000000,
+     1.000000
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 2,
+&quot;Time Elapsed&quot; : 0
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0xbe4bfe881113e717&quot;,
+  &quot;suid_high&quot; : &quot;0x11ea006282d7f9c&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 768,
+   &quot;timestamp&quot; : 67353266333,
+   &quot;payload&quot; : {
+    &quot;sample_rate&quot; : 52.000000,
+    &quot;water_mark&quot; : 1,
+    &quot;range&quot; : [
+     -2000.000000,
+     2000.000000
+    ],
+    &quot;resolution&quot; : 0.070000,
+    &quot;operation_mode&quot; : &quot;HIGH_PERF&quot;,
+    &quot;active_current&quot; : 1250,
+    &quot;stream_is_synchronous&quot; : 0
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 3,
+&quot;Time Elapsed&quot; : 0
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0xbe4bfe881113e717&quot;,
+  &quot;suid_high&quot; : &quot;0x11ea006282d7f9c&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1022,
+   &quot;timestamp&quot; : 67353266928,
+   &quot;payload&quot; : {
+    &quot;bias&quot; : [
+     0.000000,
+     0.000000,
+     0.000000
+    ],
+    &quot;comp_matrix&quot; : [
+     1.000000,
+     0.000000,
+     0.000000,
+     0.000000,
+     1.000000,
+     0.000000,
+     0.000000,
+     0.000000,
+     1.000000
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 4,
+&quot;Time Elapsed&quot; : 0
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0xbe4bfe881113e717&quot;,
+  &quot;suid_high&quot; : &quot;0x11ea006282d7f9c&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1025,
+   &quot;timestamp&quot; : 67353254481,
+   &quot;payload&quot; : {
+    &quot;data&quot; : [
+     -0.047647,
+     0.439823,
+     0.834441
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_UNRELIABLE&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 5,
+&quot;Time Elapsed&quot; : 0
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0xbe4bfe881113e717&quot;,
+  &quot;suid_high&quot; : &quot;0x11ea006282d7f9c&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1025,
+   &quot;timestamp&quot; : 67353641434,
+   &quot;payload&quot; : {
+    &quot;data&quot; : [
+     -0.338419,
+     1.494175,
+     4.014603
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_UNRELIABLE&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 6,
+&quot;Time Elapsed&quot; : 0
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0xbe4bfe881113e717&quot;,
+... (cắt bớt, tổng 12687 dòng) ...
+  {
+   &quot;msg_id&quot; : 1025,
+   &quot;timestamp&quot; : 67543641733,
+   &quot;payload&quot; : {
+    &quot;data&quot; : [
+     0.000000,
+     0.015882,
+     0.050091
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 523,
+&quot;Time Elapsed&quot; : 10
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0xbe4bfe881113e717&quot;,
+  &quot;suid_high&quot; : &quot;0x11ea006282d7f9c&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1025,
+   &quot;timestamp&quot; : 67544009238,
+   &quot;payload&quot; : {
+    &quot;data&quot; : [
+     0.000000,
+     0.017104,
+     0.051313
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 524,
+&quot;Time Elapsed&quot; : 10
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0xbe4bfe881113e717&quot;,
+  &quot;suid_high&quot; : &quot;0x11ea006282d7f9c&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1025,
+   &quot;timestamp&quot; : 67544376729,
+   &quot;payload&quot; : {
+    &quot;data&quot; : [
+     0.000000,
+     0.015882,
+     0.051313
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 525,
+&quot;Time Elapsed&quot; : 10
+}
+04:04:29.357 awoke
+04:04:29.357 disable_sensor( gyro)
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0xbe4bfe881113e717&quot;,
+  &quot;suid_high&quot; : &quot;0x11ea006282d7f9c&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1025,
+   &quot;timestamp&quot; : 67544744234,
+   &quot;payload&quot; : {
+    &quot;data&quot; : [
+     -0.001222,
+     0.012217,
+     0.051313
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 526,
+&quot;Time Elapsed&quot; : 10
+}
+04:04:29.364 disable_sensor() complete rc 0
+04:04:29.364 end iteration: 1
+04:04:29.364 sleep(1) seconds
+04:04:30.365 awoke
+04:04:30.365 PASS see_workhorse -sensor=gyro -sample_rate=50 -duration=10 -display_events=1 
+PASS see_workhorse -sensor=gyro -sample_rate=50 -duration=10 -display_events=1 
+04:04:30.365 begin delete psalt
+04:04:30.378 end delete psalt
+RC=0
+
+### artifacts/see_mag.txt
+see_workhorse version 2.15
+04:04:30.616 see_workhorse -sensor=mag -sample_rate=10 -duration=10 -display_events=1 
+begin usta_get_sensor_list
+diag: Diag_LSM_Init: invoked for pid: 13524 with init_count: 0
+diag:successfully connected to socket 11
+diag: Diag_LSM_Init: done for pid: 13524 with init_count: 1
+end   usta_get_sensor_list
+por file: /etc/sensors/por_spec.txt not found.
+04:04:30.715 psalt-&gt;begin() took 99 milliseconds
+04:04:30.715 get_sensor_suid( diag_sensor)
+04:04:30.716 + diag_sensor suid = [high 1292e618203987b5, low 94436fa912689085]
+04:04:30.716 get_sensor_suid( delta_angle)
+04:04:30.716 lookup: mag
+04:04:30.716 suid = [high ebd5604d09d379bc, low a54dcf30ec041e0f]
+04:04:30.716 -sensor=mag -rigid_body=[display]  found suid = 0xebd5604d09d379bca54dcf30ec041e0f
+04:04:30.716 is NOT POR.
+04:04:30.716 has max_rate: 100 hz
+04:04:30.716 begin iteration: 1
+04:04:30.716 stream_sensor( mag)
+04:04:30.716 + sample_rate: 10.000000 hz
+04:04:30.720 config_stream_sensor() complete rc 0
+04:04:30.720 sleep(10) seconds
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0xa54dcf30ec041e0f&quot;,
+  &quot;suid_high&quot; : &quot;0xebd5604d09d379bc&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 768,
+   &quot;timestamp&quot; : 67571314165,
+   &quot;payload&quot; : {
+    &quot;sample_rate&quot; : 10.000000,
+    &quot;water_mark&quot; : 1,
+    &quot;range&quot; : [
+     -4912.000000,
+     4912.000000
+    ],
+    &quot;resolution&quot; : 0.150000,
+    &quot;operation_mode&quot; : &quot;NORMAL&quot;,
+    &quot;active_current&quot; : 1100,
+    &quot;dri_enabled&quot; : 0
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 1,
+&quot;Time Elapsed&quot; : 0
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0xa54dcf30ec041e0f&quot;,
+  &quot;suid_high&quot; : &quot;0xebd5604d09d379bc&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1022,
+   &quot;timestamp&quot; : 67571314815,
+   &quot;payload&quot; : {
+    &quot;bias&quot; : [
+     0.000000,
+     0.000000,
+     0.000000
+    ],
+    &quot;comp_matrix&quot; : [
+     1.007600,
+     -0.039300,
+     0.013800,
+     -0.039300,
+     0.987100,
+     -0.011100,
+     0.013800,
+     -0.011100,
+     1.005300
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;,
+    &quot;cal_id&quot; : 0
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 2,
+&quot;Time Elapsed&quot; : 0
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0xa54dcf30ec041e0f&quot;,
+  &quot;suid_high&quot; : &quot;0xebd5604d09d379bc&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1025,
+   &quot;timestamp&quot; : 67571418955,
+   &quot;payload&quot; : {
+    &quot;data&quot; : [
+     13.710540,
+     16.244566,
+     -21.096991
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 3,
+&quot;Time Elapsed&quot; : 0
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0xa54dcf30ec041e0f&quot;,
+  &quot;suid_high&quot; : &quot;0xebd5604d09d379bc&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1025,
+   &quot;timestamp&quot; : 67573338955,
+   &quot;payload&quot; : {
+    &quot;data&quot; : [
+     17.360222,
+     14.938546,
+     -22.843533
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 4,
+&quot;Time Elapsed&quot; : 0
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0xa54dcf30ec041e0f&quot;,
+  &quot;suid_high&quot; : &quot;0xebd5604d09d379bc&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1025,
+   &quot;timestamp&quot; : 67575258955,
+   &quot;payload&quot; : {
+    &quot;data&quot; : [
+     17.360222,
+     14.938546,
+     -22.843533
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 5,
+&quot;Time Elapsed&quot; : 0
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0xa54dcf30ec041e0f&quot;,
+  &quot;suid_high&quot; : &quot;0xebd5604d09d379bc&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1025,
+   &quot;timestamp&quot; : 67577178955,
+   &quot;payload&quot; : {
+    &quot;data&quot; : [
+     14.488065,
+     15.767566,
+     -20.780056
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 6,
+&quot;Time Elapsed&quot; : 1
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0xa54dcf30ec041e0f&quot;,
+  &quot;suid_high&quot; : &quot;0xebd5604d09d379bc&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1025,
+   &quot;timestamp&quot; : 67579098955,
+   &quot;payload&quot; : {
+    &quot;data&quot; : [
+     15.241065,
+     15.453616,
+     -21.821941
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;
+   }
+... (cắt bớt, tổng 2497 dòng) ...
+  {
+   &quot;msg_id&quot; : 1025,
+   &quot;timestamp&quot; : 67755738955,
+   &quot;payload&quot; : {
+    &quot;data&quot; : [
+     15.696869,
+     15.577336,
+     -21.214218
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 99,
+&quot;Time Elapsed&quot; : 10
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0xa54dcf30ec041e0f&quot;,
+  &quot;suid_high&quot; : &quot;0xebd5604d09d379bc&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1025,
+   &quot;timestamp&quot; : 67757658955,
+   &quot;payload&quot; : {
+    &quot;data&quot; : [
+     15.701504,
+     14.856991,
+     -23.015430
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 100,
+&quot;Time Elapsed&quot; : 10
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0xa54dcf30ec041e0f&quot;,
+  &quot;suid_high&quot; : &quot;0xebd5604d09d379bc&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1025,
+   &quot;timestamp&quot; : 67759578955,
+   &quot;payload&quot; : {
+    &quot;data&quot; : [
+     15.409575,
+     14.860456,
+     -22.265596
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 101,
+&quot;Time Elapsed&quot; : 10
+}
+
+&quot;sns_client_event_msg&quot; : {
+ &quot;suid&quot; : {
+  &quot;suid_low&quot; : &quot;0xa54dcf30ec041e0f&quot;,
+  &quot;suid_high&quot; : &quot;0xebd5604d09d379bc&quot;
+ },
+ &quot;events&quot; : [
+  {
+   &quot;msg_id&quot; : 1025,
+   &quot;timestamp&quot; : 67761498955,
+   &quot;payload&quot; : {
+    &quot;data&quot; : [
+     15.247275,
+     15.448622,
+     -21.369556
+    ],
+    &quot;status&quot; : &quot;SNS_STD_SENSOR_SAMPLE_STATUS_ACCURACY_HIGH&quot;
+   }
+  }
+ ]
+},
+ &quot;Event Counter&quot; : 102,
+&quot;Time Elapsed&quot; : 10
+}
+04:04:40.721 awoke
+04:04:40.721 disable_sensor( mag)
+04:04:40.725 disable_sensor() complete rc 0
+04:04:40.725 end iteration: 1
+04:04:40.725 sleep(1) seconds
+04:04:41.727 awoke
+04:04:41.727 PASS see_workhorse -sensor=mag -sample_rate=10 -duration=10 -display_events=1 
+PASS see_workhorse -sensor=mag -sample_rate=10 -duration=10 -display_events=1 
+04:04:41.727 begin delete psalt
+04:04:41.742 end delete psalt
+RC=0
+
+### artifacts/sht4x_loop.txt
+READ 40534 30642
+READ 40537 30649
+READ 40523 30664
+
+### artifacts/sht4x_once.txt
+READ 40534 30642
+
+### artifacts/ssc_sensor_info.txt
+ssc_sensor_info v1.90
+
+SUID           = 0xebd5604d09d379bca54dcf30ec041e0f
+NAME           = ak0991x
+VENDOR         = akm
+TYPE           = mag
+AVAILABLE      = true
+VERSION        = 2.62.47
+API            = sns_mag.proto
+RATES          = [10.000000, 20.000000, 50.000000, 100.000000]
+RESOLUTIONS    = 0.150000
+RANGES         = [-4912.000000,4912.000000]
+DRI            = false
+FIFO_SIZE      = 0
+STREAM_TYPE    = streaming
+STREAM_SYNC    = false
+DYNAMIC        = false
+EVENT_SIZE     = 16
+OP_MODES       = NORMAL
+ACTIVE_CURRENT = 1100
+SLEEP_CURRENT  = 1
+HW_ID          = 0
+RIGID_BODY     = display
+PHYSICAL_SENSOR       = true
+PHYSICAL_SENSOR_TESTS = [3, 1]
+SELECTED_RESOLUTION   = 0.150000
+SELECTED_RANGE        = [-4912.000000,4912.000000]
+
+SUID           = 0x2a82a283812ab5b65847d40e0aca2b38
+NAME           = lsm6dsm
+VENDOR         = STMicro
+TYPE           = accel
+AVAILABLE      = true
+VERSION        = 0.1.89
+API            = sns_accel.proto
+RATES          = [13.000000, 26.000000, 52.000000, 104.000000, 208.000000, 416.000000]
+RESOLUTIONS    = [0.061000, 0.122000, 0.244000, 0.488000]
+RANGES         = [[-2.000000,2.000000], [-4.000000,4.000000], [-8.000000,-8.000000], [-16.000000,16.000000]]
+DRI            = true
+FIFO_SIZE      = 208
+STREAM_TYPE    = streaming
+STREAM_SYNC    = false
+DYNAMIC        = false
+EVENT_SIZE     = 16
+OP_MODES       = [LPM, NORMAL, HIGH_PERF]
+ACTIVE_CURRENT = [25, 85, 150]
+SLEEP_CURRENT  = 3
+HW_ID          = 0
+RIGID_BODY     = display
+PHYSICAL_SENSOR       = true
+PHYSICAL_SENSOR_TESTS = [3, 2, 1]
+SELECTED_RESOLUTION   = 0.488000
+SELECTED_RANGE        = [-16.000000,16.000000]
+LOW_LATENCY_RATES     = 833.000000
+
+SUID           = 0x011ea006282d7f9cbe4bfe881113e717
+NAME           = lsm6dsm
+VENDOR         = STMicro
+TYPE           = gyro
+AVAILABLE      = true
+VERSION        = 0.1.89
+API            = sns_gyro.proto
+RATES          = [13.000000, 26.000000, 52.000000, 104.000000, 208.000000, 416.000000]
+RESOLUTIONS    = [0.004375, 0.008750, 0.017500, 0.035000, 0.070000]
+RANGES         = [[-125.000000,125.000000], [-245.000000,245.000000], [-500.000000,500.000000], [-1000.000000,1000.000000], [-2000.000000,2000.000000]]
+DRI            = true
+FIFO_SIZE      = 208
+STREAM_TYPE    = streaming
+STREAM_SYNC    = false
+DYNAMIC        = false
+EVENT_SIZE     = 16
+OP_MODES       = [LPM, NORMAL, HIGH_PERF]
+ACTIVE_CURRENT = [270, 430, 555]
+SLEEP_CURRENT  = 3
+HW_ID          = 0
+RIGID_BODY     = display
+PHYSICAL_SENSOR       = true
+PHYSICAL_SENSOR_TESTS = [3, 2, 1]
+SELECTED_RESOLUTION   = 0.070000
+SELECTED_RANGE        = [-2000.000000,2000.000000]
+LOW_LATENCY_RATES     = 833.000000
+
+SUID           = 0x320a2b36a64d3fa7304c23e388e96faf
+NAME           = lsm6dsm
+VENDOR         = STMicro
+TYPE           = motion_detect
+AVAILABLE      = true
+VERSION        = 0.1.89
+API            = sns_motion_detect.proto
+DRI            = true
+FIFO_SIZE      = 0
+STREAM_TYPE    = single_output
+STREAM_SYNC    = false
+DYNAMIC        = false
+EVENT_SIZE     = 2
+OP_MODES       = HIGH_PERF
+ACTIVE_CURRENT = 24
+SLEEP_CURRENT  = 6
+HW_ID          = 0
+RIGID_BODY     = display
+PHYSICAL_SENSOR       = true
+PHYSICAL_SENSOR_TESTS = 3
+
+SUID           = 0xc001be198c7282b5bf40c1452d480443
+NAME           = lsm6dsm
+VENDOR         = STMicro
+TYPE           = sensor_temperature
+AVAILABLE      = true
+VERSION        = 0.1.89
+API            = sns_sensor_temperature.proto
+RATES          = [1.000000, 5.000000]
+RESOLUTIONS    = 0.062500
+RANGES         = [-40.000000,85.000000]
+DRI            = false
+FIFO_SIZE      = 0
+STREAM_TYPE    = streaming
+STREAM_SYNC    = false
+DYNAMIC        = false
+EVENT_SIZE     = 8
+OP_MODES       = [LPM, NORMAL, HIGH_PERF]
+ACTIVE_CURRENT = [24, 70, 240]
+SLEEP_CURRENT  = 6
+HW_ID          = 0
+RIGID_BODY     = display
+PHYSICAL_SENSOR       = true
+PHYSICAL_SENSOR_TESTS = 3
+
+SUID           = 0x69def905fea2fbac6a43ca273221a2eb
+NAME           = aont
+VENDOR         = QTI
+TYPE           = aont
+AVAILABLE      = true
+VERSION        = 0.0.1
+API            = sns_aont.proto
+STREAM_TYPE    = on_change
+
+SUID           = 0xabababababababababababababababab
+NAME           = suid
+VENDOR         = QTI
+TYPE           = suid
+AVAILABLE      = true
+VERSION        = 0.0.1
+API            = sns_suid.proto
+STREAM_TYPE    = single_output
+
+SUID           = 0xe12754a7007f27595e2541b4701e2275
+NAME           = registry
+VENDOR         = QTI
+TYPE           = registry
+AVAILABLE      = true
+VERSION        = 0.0.1
+API            = sns_registry.proto
+STREAM_TYPE    = single_output
+
+SUID           = 0x1292e618203987b594436fa912689085
+NAME           = diag_sensor
+VENDOR         = QTI
+TYPE           = diag_sensor
+AVAILABLE      = true
+VERSION        = 0.0.1
+API            = sns_diag_sensor.proto
+STREAM_TYPE    = on_change
+
+SUID           = 0xbcbe1be07afac0ade8115d68923fd021
+NAME           = Device Mode
+VENDOR         = QTI
+TYPE           = device_mode
+AVAILABLE      = true
+VERSION        = 0.0.1
+API            = sns_device_mode.proto
+STREAM_TYPE    = on_change
+
+SUID           = 0x54644a7d23315715fb738299d24a7d38
+NAME           = activity_recognition
+VENDOR         = QTI
+TYPE           = activity_recognition
+AVAILABLE      = true
+VERSION        = 0.0.1
+API            = sns_activity_recognition.proto
+RATES          = 5.000000
+STREAM_TYPE    = on_change
+ACTIVE_CURRENT = 25
+
+SUID           = 0x0f9c96c9fb6aac91724ca3e65a594167
+NAME           = amd
+VENDOR         = QTI
+TYPE           = amd
+AVAILABLE      = true
+VERSION        = 0.0.1
+API            = sns_amd.proto
+RATES          = [10.000000, 10.000000]
+STREAM_TYPE    = on_change
+ACTIVE_CURRENT = 25
+RIGID_BODY     = display
+
+SUID           = 0x33fe67cbeb9219a9e7111e4b4eb076ab
+NAME           = Device Orientation
+VENDOR         = QTI
+TYPE           = device_orient
+AVAILABLE      = true
+... (cắt bớt, tổng 401 dòng) ...
+SUID           = 0xf67eb04f0c5bdaf757f249b272e1d985
+NAME           = pedometer
+VENDOR         = QTI
+TYPE           = pedometer
+AVAILABLE      = true
+VERSION        = 0.0.1
+API            = sns_pedometer.proto
+RATES          = 25.000000
+STREAM_TYPE    = on_change
+ACTIVE_CURRENT = 150
+
+SUID           = 0xa187691a14ea258bff41214831618136
+NAME           = step_detect
+VENDOR         = QTI
+TYPE           = step_detect
+AVAILABLE      = true
+VERSION        = 0.0.1
+API            = sns_step_detect.proto
+RATES          = 25.000000
+STREAM_TYPE    = on_change
+ACTIVE_CURRENT = 150
+
+SUID           = 0x86e3ba5d18b022a56e4447a91212fcb3
+NAME           = Persistent Motion Detector
+VENDOR         = QTI
+TYPE           = persist_motion_detect
+AVAILABLE      = true
+VERSION        = 0.0.1
+API            = sns_persist_motion_detect.proto
+RATES          = [10.000000, 10.000000]
+STREAM_TYPE    = single_output
+ACTIVE_CURRENT = 25
+
+SUID           = 0x0ab11c8b653ae6bef94cf290b4559f0c
+NAME           = sns_rmd
+VENDOR         = QTI
+TYPE           = rmd
+AVAILABLE      = true
+VERSION        = 0.0.1
+API            = sns_rmd.proto
+RATES          = [30.000000, 30.000000]
+STREAM_TYPE    = on_change
+ACTIVE_CURRENT = 25
+
+SUID           = 0xa0dbd36a00a67b90e7117d667c45d44c
+NAME           = Rotation Vector
+VENDOR         = QTI
+TYPE           = rotv
+AVAILABLE      = true
+VERSION        = 0.0.1
+API            = sns_rotv.proto
+RATES          = [5.000000, 200.000000]
+STREAM_TYPE    = streaming
+ACTIVE_CURRENT = [1195, 1415]
+RIGID_BODY     = display
+
+SUID           = 0x3b4fb01aa61bbbf4b13b11c377fc7bba
+NAME           = sns_smd
+VENDOR         = QTI
+TYPE           = sig_motion
+AVAILABLE      = true
+VERSION        = 0.0.1
+API            = sns_sig_motion.proto
+RATES          = [10.000000, 10.000000]
+STREAM_TYPE    = single_output
+ACTIVE_CURRENT = 25
+
+SUID           = 0xb0f5fa2bffdb00b51d4335813a86f239
+NAME           = sns_tilt
+VENDOR         = QTI
+TYPE           = tilt
+AVAILABLE      = true
+VERSION        = 0.0.1
+API            = sns_tilt.proto
+RATES          = [10.000000, 10.000000]
+STREAM_TYPE    = on_change
+ACTIVE_CURRENT = 25
+RIGID_BODY     = display
+
+SUID           = 0x9346216912ffeeddccbbaa1269214693
+NAME           = sns_tilt_to_wake
+VENDOR         = QTI
+TYPE           = tilt_to_wake
+AVAILABLE      = true
+VERSION        = 0.0.1
+API            = sns_tilt_to_wake.proto
+STREAM_TYPE    = on_change
+ACTIVE_CURRENT = 25
+RIGID_BODY     = display
+
+SUID           = 0xe0e3f77b504b96a1a7167528f835f4ee
+NAME           = oem1
+VENDOR         = QTI
+TYPE           = oem1
+AVAILABLE      = true
+VERSION        = 0.0.1
+API            = sns_oem1.proto
+STREAM_TYPE    = on_change
+
+RC=0
+
+### artifacts/tpm_dev.txt
+crw-rw----    1 tss      root       10, 224 May 29  2025 /dev/tpm0
+crw-rw----    1 root     tss       253, 65536 May 29  2025 /dev/tpmrm0
+
+### artifacts/tpm_dmesg.txt
+[    1.047923] tpm_tis_i2c 13-002e: 2.0 TPM (device-id 0x0, rev-id 78)
+[    1.083944] tpm tpm0: A TPM error (256) occurred attempting the self test
+[    1.091671] tpm tpm0: starting up the TPM manually
+[    4.594327] systemd[1]: systemd 255.21^ running in system mode (+PAM -AUDIT -SELINUX -APPARMOR +IMA -SMACK +SECCOMP -GCRYPT -GNUTLS -OPENSSL +ACL +BLKID -CURL -ELFUTILS -FIDO2 -IDN2 -IDN -IPTC +KMOD -LIBCRYPTSETUP +LIBFDISK -PCRE2 -PWQUALITY -P11KIT -QRENCODE -TPM2 -BZIP2 -LZ4 -XZ -ZLIB +ZSTD -BPF_FRAMEWORK +XKBCOMMON +UTMP +SYSVINIT default-hierarchy=unified)
+
+### artifacts/tpm_functions.txt
+### getcap_fixed: tpm2_getcap properties-fixed
+TPM2_PT_FAMILY_INDICATOR:
+  raw: 0x322E3000
+  value: &quot;2.0&quot;
+TPM2_PT_LEVEL:
+  raw: 0
+TPM2_PT_REVISION:
+  raw: 0x8A
+  value: 1.38
+TPM2_PT_DAY_OF_YEAR:
+  raw: 0x8
+TPM2_PT_YEAR:
+  raw: 0x7E2
+TPM2_PT_MANUFACTURER:
+  raw: 0x53544D20
+  value: &quot;STM &quot;
+TPM2_PT_VENDOR_STRING_1:
+  raw: 0x10110
+  value: &quot;&quot;
+TPM2_PT_VENDOR_STRING_2:
+  raw: 0x60110
+  value: &quot;&quot;
+TPM2_PT_VENDOR_STRING_3:
+  raw: 0x0
+  value: &quot;&quot;
+TPM2_PT_VENDOR_STRING_4:
+  raw: 0x0
+  value: &quot;&quot;
+TPM2_PT_VENDOR_TPM_TYPE:
+  raw: 0x1
+TPM2_PT_FIRMWARE_VERSION_1:
+  raw: 0x20110
+TPM2_PT_FIRMWARE_VERSION_2:
+  raw: 0x0
+TPM2_PT_INPUT_BUFFER:
+  raw: 0x400
+TPM2_PT_HR_TRANSIENT_MIN:
+  raw: 0x5
+TPM2_PT_HR_PERSISTENT_MIN:
+  raw: 0x8
+TPM2_PT_HR_LOADED_MIN:
+  raw: 0x4
+TPM2_PT_ACTIVE_SESSIONS_MAX:
+  raw: 0x40
+TPM2_PT_PCR_COUNT:
+  raw: 0x18
+TPM2_PT_PCR_SELECT_MIN:
+  raw: 0x3
+TPM2_PT_CONTEXT_GAP_MAX:
+  raw: 0xFFFF
+TPM2_PT_NV_COUNTERS_MAX:
+  raw: 0x0
+TPM2_PT_NV_INDEX_MAX:
+  raw: 0x800
+TPM2_PT_MEMORY:
+  raw: 0x2
+TPM2_PT_CLOCK_UPDATE:
+  raw: 0x2710
+TPM2_PT_CONTEXT_HASH:
+  raw: 0xC
+TPM2_PT_CONTEXT_SYM:
+  raw: 0x6
+TPM2_PT_CONTEXT_SYM_SIZE:
+  raw: 0x100
+TPM2_PT_ORDERLY_COUNT:
+  raw: 0xFF
+TPM2_PT_MAX_COMMAND_SIZE:
+  raw: 0x710
+TPM2_PT_MAX_RESPONSE_SIZE:
+  raw: 0x710
+TPM2_PT_MAX_DIGEST:
+  raw: 0x30
+TPM2_PT_MAX_OBJECT_CONTEXT:
+  raw: 0x4A4
+TPM2_PT_MAX_SESSION_CONTEXT:
+  raw: 0x146
+TPM2_PT_PS_FAMILY_INDICATOR:
+  raw: 0x1
+TPM2_PT_PS_LEVEL:
+  raw: 0x0
+TPM2_PT_PS_REVISION:
+  raw: 0x103
+TPM2_PT_PS_DAY_OF_YEAR:
+  raw: 0x0
+TPM2_PT_PS_YEAR:
+  raw: 0x0
+TPM2_PT_SPLIT_MAX:
+  raw: 0x80
+TPM2_PT_TOTAL_COMMANDS:
+  raw: 0x6F
+TPM2_PT_LIBRARY_COMMANDS:
+  raw: 0x68
+TPM2_PT_VENDOR_COMMANDS:
+  raw: 0x7
+TPM2_PT_NV_BUFFER_MAX:
+  raw: 0x400
+TPM2_PT_MODES:
+  raw: 0x1
+  value: TPMA_MODES_FIPS_140_2
+
+RESULT getcap_fixed 0
+### getcap_variable: tpm2_getcap properties-variable
+TPM2_PT_PERMANENT:
+  ownerAuthSet:              0
+  endorsementAuthSet:        0
+  lockoutAuthSet:            0
+  reserved1:                 0
+  disableClear:              0
+  inLockout:                 0
+  tpmGeneratedEPS:           0
+  reserved2:                 0
+TPM2_PT_STARTUP_CLEAR:
+  phEnable:                  1
+  shEnable:                  1
+  ehEnable:                  1
+  phEnableNV:                1
+  reserved1:                 0
+  orderly:                   0
+TPM2_PT_HR_NV_INDEX: 0x3
+TPM2_PT_HR_LOADED: 0x0
+TPM2_PT_HR_LOADED_AVAIL: 0x4
+TPM2_PT_HR_ACTIVE: 0x0
+TPM2_PT_HR_ACTIVE_AVAIL: 0x40
+TPM2_PT_HR_TRANSIENT_AVAIL: 0x5
+TPM2_PT_HR_PERSISTENT: 0x0
+TPM2_PT_HR_PERSISTENT_AVAIL: 0x4D
+TPM2_PT_NV_COUNTERS: 0x0
+TPM2_PT_NV_COUNTERS_AVAIL: 0x15
+TPM2_PT_ALGORITHM_SET: 0x0
+TPM2_PT_LOADED_CURVES: 0x3
+TPM2_PT_LOCKOUT_COUNTER: 0x0
+TPM2_PT_MAX_AUTH_FAIL: 0x20
+TPM2_PT_LOCKOUT_INTERVAL: 0x1C20
+TPM2_PT_LOCKOUT_RECOVERY: 0x15180
+TPM2_PT_NV_WRITE_RECOVERY: 0x0
+TPM2_PT_AUDIT_COUNTER_0: 0x0
+TPM2_PT_AUDIT_COUNTER_1: 0x0
+
+RESULT getcap_variable 0
+### pcrread: tpm2_pcrread sha256:0,1,2,3
+  sha256:
+    0 : 0x0000000000000000000000000000000000000000000000000000000000000000
+    1 : 0x0000000000000000000000000000000000000000000000000000000000000000
+    2 : 0x0000000000000000000000000000000000000000000000000000000000000000
+    3 : 0x0000000000000000000000000000000000000000000000000000000000000000
+
+RESULT pcrread 0
+### getrandom: tpm2_getrandom 32 --hex
+e4f201c148b0ba6ef6623c09854771bbe2096af9e2b0023973db52bbdd6a4a9d
+RESULT getrandom 0
+### hash: sh -c echo test | tpm2_hash
+NC�&quot;�nvº��������
+RESULT hash 0
+### selftest: tpm2_selftest
+
+RESULT selftest 0
+
+### artifacts/tpm_i2cdetect.txt
+     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+00:                         -- -- -- -- -- -- -- -- 
+10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+20: -- -- -- -- -- -- -- -- -- -- -- -- -- -- UU -- 
+30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+70: -- -- -- -- -- -- -- --                         
+
+    </pre>
+  </details>
+
+  <footer>HSPTEK &middot; HSP-117 MMI &middot; Báo cáo sinh tự động</footer>
+</div>
+</body>
+</html>
