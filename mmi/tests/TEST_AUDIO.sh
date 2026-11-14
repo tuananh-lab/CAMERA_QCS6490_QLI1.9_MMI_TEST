@@ -1,13 +1,16 @@
 #!/bin/bash
-# 10. Audio. 10.2-10.4: tạo file tone 1 kHz trên PC, đẩy vào /tmp thiết bị, người test nghe.
+# 10. Audio. 10.2, 10.4: tạo file tone 1 kHz trên PC, đẩy vào /tmp thiết bị, người test nghe.
+# 10.3 (Line In): PC phát tone 1 kHz vào cổng Line In (dây nối sẵn), thiết bị thu, tool kiểm tra tone rồi phát lại cho người test nghe.
+# 10.2 (WSA) chỉ chạy khi test cụm hoặc --case (cờ clusteronly), không chạy trong --all.
 # Có thể dùng file riêng: AUDIO_WAV=/đường/dẫn/file.wav (48 kHz, 16-bit, stereo)
 : "${AUDIO_WAV:=}"
 : "${AUDIO_REC_S:=5}"              # thời gian thu âm (giây)
 : "${AUDIO_MIN_RMS:=20}"           # file thu có tín hiệu: RMS >= ngưỡng (thang 16-bit)
+: "${AUDIO_TONE_MIN_RATIO:=0.3}"   # 10.3: tỷ lệ năng lượng tại 1 kHz / tổng trong file thu (1.0 = tone sạch); thấp hơn = không thu được tone từ PC
 
 CASES_AUDIO=(
   "10.1|Kiểm tra nhận diện Sound Card|"
-  "10.2|WSA - Loa trong|manual"
+  "10.2|WSA - Loa trong|manual,clusteronly"
   "10.3|WCD - Line In|manual"
   "10.4|WCD - Line Out|manual"
 )
@@ -56,6 +59,41 @@ rms = math.sqrt(sum(x * x for x in a) / n) if n else 0
 print(len(d), "%.1f" % (n / 48000.0), "%.0f" % rms, max((abs(x) for x in a), default=0))
 PY
 }
+
+# Tạo file tone 1 kHz (-6 dBFS, stereo 48 kHz) dài $1 giây để PC phát vào Line In -> $MMI_TMP/linein.wav
+_audio_linein_wav() {
+  python3 - "$MMI_TMP/linein.wav" "$1" <<'PY' || return 1
+import math, struct, sys, wave
+w = wave.open(sys.argv[1], 'wb'); w.setnchannels(2); w.setsampwidth(2); w.setframerate(48000)
+one = b''.join(struct.pack('<hh', int(16000 * math.sin(2 * math.pi * i / 48)), int(16000 * math.sin(2 * math.pi * i / 48))) for i in range(48))   # 48 mẫu = đúng 1 chu kỳ 1 kHz
+w.writeframes(one * (1000 * int(sys.argv[2])))
+w.close()
+PY
+}
+
+# Tỷ lệ năng lượng tại tần số $2 (Hz) trong WAV 16-bit mono 48 kHz $1 (bỏ 0,5s đầu/cuối): 1.0 = tone sạch, ~0 = không có tone
+_wav_tone_ratio() {
+  python3 - "$1" "$2" <<'PY'
+import array, math, sys
+d = open(sys.argv[1], 'rb').read()
+i = d.find(b'data'); off = i + 8 if i >= 0 else 44
+a = array.array('h'); a.frombytes(d[off:off + (len(d) - off) // 2 * 2])
+fs = 48000; f = float(sys.argv[2])
+s = a[fs // 2:len(a) - fs // 2] if len(a) > 2 * fs else a
+n = len(s)
+if n == 0:
+    print("0.000"); sys.exit()
+w = 2 * math.cos(2 * math.pi * f / fs); s1 = s2 = 0.0
+for x in s:
+    s0 = x + w * s1 - s2; s2 = s1; s1 = s0
+p = s1 * s1 + s2 * s2 - w * s1 * s2          # |X|^2 tại f (Goertzel)
+tot = sum(x * x for x in s) / n
+print("%.3f" % ((2 * p / (n * n)) / tot if tot else 0))
+PY
+}
+
+# Dừng tiến trình PC đang phát tone vào Line In (nếu còn)
+_audio_pc_stop() { [ -n "${AUDIO_PC_PID:-}" ] && kill "$AUDIO_PC_PID" 2>/dev/null; AUDIO_PC_PID=""; return 0; }
 
 # Phát file qua loa. $1 = nhãn; script tinymix + agmplay đọc từ stdin (heredoc của hàm gọi)
 _audio_play_case() {
@@ -145,10 +183,22 @@ _audio_rec() {
 
 # 10.3: WCD - Line In (chỉ AMIC3)
 case_10_3() {
-  local n st bytes secs rms peak bad="" info="" r
+  local n st bytes secs rms peak bad="" info="" r ratio pcwav use_tone=1
   tc_need tinymix agmcap || return 0
   on_cleanup _audio_restore
-  pause_enter "Cắm JACK MIC vào cổng Line In, chuẩn bị nói/gây tiếng động trong ${AUDIO_REC_S}s, nhấn Enter..."
+  on_cleanup _audio_pc_stop
+  # Dây Line In nối sẵn với cổng ra âm thanh của PC: PC phát tone 1 kHz (hoặc AUDIO_WAV nếu đặt) trong lúc thiết bị thu
+  pcwav="${AUDIO_WAV:-$MMI_TMP/linein.wav}"
+  if [ -n "$AUDIO_WAV" ]; then use_tone=0
+  else _audio_linein_wav $((AUDIO_REC_S + 15)) || { tc_fail "Không tạo được file tone phát vào Line In"; return 0; }; fi
+  if command -v ffplay >/dev/null; then
+    say "  PC phát $( [ "$use_tone" = 1 ] && echo 'tone 1 kHz' || echo "$AUDIO_WAV" ) vào Line In (âm lượng PC vừa phải)..."
+    ffplay -nodisp -autoexit -loglevel quiet "$pcwav" >/dev/null 2>&1 &
+    AUDIO_PC_PID=$!
+    sleep 1
+  else
+    pause_enter "PC không có ffplay: hãy tự phát file $pcwav trên PC (ra cổng nối Line In) rồi nhấn Enter..."
+  fi
 
   say "  Thu AMIC3 (${AUDIO_REC_S}s) ..."
   _audio_rec mic_3 <<'EOF2'
@@ -170,12 +220,19 @@ i=0; while kill -0 $p 2>/dev/null && [ $i -lt 8 ]; do sleep 1; i=$((i + 1)); don
 kill -9 $p 2>/dev/null; exit 0
 EOF2
   r=$?; [ $r -eq 0 ] || bad="$bad AMIC3(thu âm lỗi, bước $r);"
+  _audio_pc_stop
 
   for n in mic_3; do
     [ -s "$(artifact "$n.wav")" ] || continue
     read -r bytes secs rms peak <<< "$(_wav_stats "$(artifact "$n.wav")")"
     info="$info $n: ${secs}s RMS=$rms peak=$peak;"
-    [ "${rms:-0}" -ge "$AUDIO_MIN_RMS" ] || bad="$bad $n(RMS=$rms < $AUDIO_MIN_RMS: gần như im lặng);"
+    [ "${rms:-0}" -ge "$AUDIO_MIN_RMS" ] || bad="$bad $n(RMS=$rms < $AUDIO_MIN_RMS: gần như im lặng, kiểm tra dây Line In và âm lượng PC);"
+    if [ "$use_tone" = 1 ]; then       # có tín hiệu nhưng không phải tone từ PC (nhiễu / sai cổng / không cắm dây)
+      ratio="$(_wav_tone_ratio "$(artifact "$n.wav")" 1000)"
+      info="$info tone1k=${ratio};"
+      [ "${peak:-0}" -lt 32700 ] || bad="$bad $n(peak=$peak: tín hiệu bị cắt/méo do âm lượng PC quá lớn, giảm âm lượng PC rồi test lại);"
+      awk -v r="${ratio:-0}" -v m="$AUDIO_TONE_MIN_RATIO" 'BEGIN{exit !(r+0 >= m+0)}' || bad="$bad $n(không thấy tone 1 kHz từ PC: tỷ lệ=${ratio:-?} < $AUDIO_TONE_MIN_RATIO);"
+    fi
   done
   say "  Kết quả phân tích:$info"
   if [ -n "$bad" ]; then tc_fail "$bad"; return 0; fi
@@ -188,6 +245,6 @@ EOF2
   else
     say "  (PC không có ffplay) Nghe file trong: $REPORT_DIR/artifacts/mic_3.wav"
   fi
-  tc_manual "File thu AMIC3 (Line In) có tiếng rõ, không rè/nhiễu quá nhiều?" \
-            "AMIC3 có tiếng, rõ:$info" "Người test: file thu AMIC3 bị rè/nhiễu/mất tiếng:$info"
+  tc_manual "File thu AMIC3 (Line In) nghe lại có tiếng tone rõ, đều, không rè/nhiễu quá nhiều?" \
+            "AMIC3 thu được tone rõ:$info" "Người test: file thu AMIC3 bị rè/nhiễu/mất tiếng:$info"
 }

@@ -153,7 +153,8 @@ tc_end() {
     SKIP) CNT_SKIP=$((CNT_SKIP + 1)); col="$C_Y" ;;
     *)    CNT_FAIL=$((CNT_FAIL + 1)); col="$C_R" ;;
   esac
-  say "  → ${col}${res}${C_0}  ${detail}"
+  # say dùng printf %b: nhân đôi '\' để output thiết bị (vd \c) không bị diễn giải / cắt dòng
+  say "  → ${col}${res}${C_0}  $(printf '%s' "$detail" | sed 's/\\/\\\\/g')"
   return 0
 }
 tc_pass() { tc_end PASS "$1"; }

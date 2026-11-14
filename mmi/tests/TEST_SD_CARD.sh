@@ -7,9 +7,9 @@
 : "${SD_MIN_READ_MBPS:=}"
 
 CASES_SD_CARD=(
-  "6.1|Kiểm tra nhận SDCARD|"
-  "6.2|Kiểm tra ghi|"
-  "6.3|Kiểm tra đọc|"
+  "6.1|Kiểm tra nhận SDCARD|clusteronly"
+  "6.2|Kiểm tra ghi|clusteronly"
+  "6.3|Kiểm tra đọc|clusteronly"
 )
 
 # In đường dẫn thiết bị SD (rỗng nếu không có)

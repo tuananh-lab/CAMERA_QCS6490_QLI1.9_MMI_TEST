@@ -34,11 +34,12 @@ HSP117_MMI_TEST/
 ├── config.sh                 CẤU HÌNH DUY NHẤT: sản phẩm, ngưỡng pass/fail, cụm test, I2C, RTSP, MAC, timeout...
 ├── setup_pc.sh               Kiểm tra / cài tool trên PC Ubuntu (adb, iperf3, ffmpeg, vlc, python3-tk...)
 ├── README.md                 Hướng dẫn vận hành nhanh
-├── soure_tree.md             (file này)
+├── source_tree.md            (file này)
+├── .gitignore                Loại reports/, .last_ip, __pycache__ khỏi git
 ├── .last_ip                  IP thiết bị lần chạy trước (tự sinh, không đưa vào gói bàn giao)
 ├── reports/                  Kết quả (tự sinh, không đưa vào gói bàn giao)
-│   ├── <tên lần test>/       Mỗi lần test đúng 1 thư mục: .html + .log + .csv
-│   └── log/                  Log thông tin thiết bị: deviceinfo.log, devinfo_log.csv, mac_write_log.csv, gui_last_run.log
+│   ├── .last_run             Thiết bị/thư mục test gần nhất (tự sinh): để log Serial/MAC vào đúng thư mục
+│   └── <tên lần test>/       Mỗi thiết bị 1 thư mục: .html .log .csv + deviceinfo.log devinfo_log.csv mac_write_log.csv gui_last_run.log
 └── mmi/
     ├── run_mmi.sh            Điều phối: tham số, chọn nhóm/cụm/mục, kết nối, chạy test, tổng kết
     ├── lib/
@@ -67,14 +68,14 @@ Mỗi file `TEST_<NHÓM>.sh` khai báo danh sách `CASES_<NHÓM>=( "id|tên|cờ
 |--------------|--------------------|-----------|--------------------------------------------------------------------------------------------|
 | COM          | TEST_COM.sh        | 1.1-1.3   | Số core CPU, RAM (tổng/trống), dung lượng storage `sda`                                    |
 | ETHERNET     | TEST_ETHERNET.sh   | 2.1-2.3   | Tốc độ iperf3 nhận / truyền / hai chiều (PC tự bật iperf3 server)                          |
-| NVME         | TEST_NVME.sh       | 3.1-3.3   | Nhận NVMe; đo tốc độ ghi / đọc bằng fio                                                    |
+| NVME         | TEST_NVME.sh       | 3.1-3.3   | Nhận NVMe; đo tốc độ ghi / đọc bằng fio (clusteronly: không chạy trong `--all`)             |
 | GPS          | TEST_GPS.sh        | 4.1-4.5   | Bản tin NMEA, số vệ tinh, GNSS Fix, tọa độ, trạng thái Navigation (cần ăng-ten ngoài trời) |
 | RTC          | TEST_RTC.sh        | 5.1-5.6   | Nhận RTC, đọc, set giờ, giữ giờ sau rút nguồn (5.4, 5.5), đồng bộ không/có internet        |
-| SD_CARD      | TEST_SD_CARD.sh    | 6.1-6.3   | Nhận thẻ SD; ghi / đọc bằng fio                                                            |
+| SD_CARD      | TEST_SD_CARD.sh    | 6.1-6.3   | Nhận thẻ SD; ghi / đọc bằng fio (clusteronly: không chạy trong `--all`)                     |
 | TPM          | TEST_TPM.sh        | 7.1-7.2   | Nhận TPM; chạy các lệnh tpm2                                                               |
 | ALARM_IO     | TEST_ALARM_IO.sh   | 8.1-8.2   | Alarm IN (đọc GPIO); Alarm OUT (echo 0/1 3 lần, người test nghe tiếng rơ-le)               |
 | CAMERA       | TEST_CAMERA.sh     | 9.1-9.3   | Chụp ảnh, quay video 1080p/4K, stream RTSP (người test đánh giá hình)                      |
-| AUDIO        | TEST_AUDIO.sh      | 10.1-10.4 | Sound card, loa trong, Line In (AMIC3), Line Out                                           |
+| AUDIO        | TEST_AUDIO.sh      | 10.1-10.4 | Sound card, loa trong (WSA, clusteronly), Line In (AMIC3: PC phát tone 1 kHz, thu, nghe lại), Line Out |
 | LENS         | TEST_LENS.sh       | 11.1-11.7 | Zoom, Focus, Iris, IR CUT (xem qua RTSP), nhiệt độ lens, cảm biến sáng, IR LED             |
 | SENSOR       | TEST_SENSOR.sh     | 12.1-12.5 | Accel/Gyro/Mag (dữ liệu khác 0), nhiệt độ-độ ẩm SHT4x                                      |
 | (dùng chung) | _common_storage.sh | -         | Hàm chung cho NVMe/SD: tìm thiết bị, mount hay thô, chạy fio                               |
@@ -111,21 +112,22 @@ Cờ trong danh sách mục:
 
 ## 6. Dữ liệu sinh ra
 
-Mỗi lần test đúng **một** thư mục `reports/<PRODUCT>_<tem>_<DEVICE ID>_<giờ>[_<CỤM>]_<PASS|FAIL|INCOMPLETE>/`
-chỉ có 3 file cùng tên:
+Mỗi thiết bị đúng **một** thư mục `reports/<PRODUCT>_<tem>_<DEVICE ID>_<giờ>[_<CỤM>]_<PASS|FAIL|INCOMPLETE>/`:
 
-- `.html`: báo cáo + log.
-- `.log`: log đầy đủ + phụ lục dữ liệu thô.
-- `.csv`: bảng kết quả, mở được bằng Excel.
+- Lần test tạo 3 file cùng tên: `.html` (báo cáo + log), `.log` (log đầy đủ + phụ lục dữ liệu thô),
+  `.csv` (bảng kết quả, mở được bằng Excel).
+- Read Chip ID / Write Serial / Write MAC / Reboot ghi thêm vào **cùng thư mục**:
+  - `deviceinfo.log`: log đầy đủ (có output thô của thiết bị), nối tiếp.
+  - `devinfo_log.csv`: tóm tắt Read / Write Serial / Reboot.
+  - `mac_write_log.csv`: mỗi lần ghi MAC một dòng.
+  - `gui_last_run.log`: output thô của lần Read / Reboot gần nhất trên giao diện.
+
+Cơ chế (report.sh: `devlog_resolve`, `devlog_match`, `devlog_pointer_*`): `reports/.last_run` ghi thư mục + Chip ID +
+MAC của thiết bị test gần nhất. Thao tác thông tin thiết bị đặt `LOG_DIR` = thư mục đó nếu Chip ID hoặc MAC trùng
+(ghi MAC xong thì MAC mới được thêm vào danh sách). Chưa có thì tạo `*_DEVINFO`; lần test sau của thiết bị đó dùng
+lại thư mục này và đổi tên theo kết quả. Chỉ nhớ thiết bị gần nhất.
 
 Mọi file tạm (ảnh/video/wav, meta...) nằm trong `/tmp/mmi.*` và bị xoá khi thoát.
-
-Log thông tin thiết bị nằm riêng trong `reports/log/` (không tạo thư mục theo lần test):
-
-- `deviceinfo.log`: log đầy đủ của Đọc Chip ID / ghi Serial / ghi MAC / reboot (có output thô của thiết bị).
-- `devinfo_log.csv`: tóm tắt Read / Write Serial / Reboot.
-- `mac_write_log.csv`: mỗi lần ghi MAC thêm một dòng.
-- `gui_last_run.log`: output thô của lần Read / Reboot gần nhất trên giao diện.
 
 ## 7. Thư viện lõi - hàm chính (mmi/lib)
 
@@ -159,7 +161,7 @@ Log thông tin thiết bị nằm riêng trong `reports/log/` (không tạo thư
 | Đổi cách hỏi người test / giao diện terminal                     | `mmi/lib/mmi_lib.sh` (`ask_yn`)                                              |
 | Đổi nội dung / bố cục báo cáo                                    | `mmi/lib/html_report.py`, `mmi/lib/report.css`, `mmi/lib/report.sh`          |
 | Đổi tên thư mục/file báo cáo                                     | `mmi/lib/report.sh` (`make_html_report`)                                     |
-| Đổi nơi lưu log thiết bị                                         | `config.sh` (`LOG_DIR`) và `tool.py` (`LOG_DIR`)                             |
+| Đổi nơi lưu log thiết bị                                         | `mmi/lib/report.sh` (`devlog_resolve`), `config.sh` (`LOG_DIR`)              |
 | Đổi giao diện tool                                               | `tool.py`                                                                    |
 | Đổi luồng ghi MAC                                                | `mmi/lib/mac_write.sh`, `mmi/lib/mac_bin.py`, biến `MAC_*` trong `config.sh` |
 | Đổi cách xem stream (VLC/ffplay, cache)                          | `mmi/lib/mmi_rtsp.sh`, biến `RTSP_*` trong `config.sh`                       |

@@ -19,7 +19,6 @@ TOOL_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_SH = os.path.join(TOOL_DIR, "config.sh")
 RUN_MMI = os.path.join(TOOL_DIR, "mmi", "run_mmi.sh")
 REPORT_DIR = os.path.join(TOOL_DIR, "reports")
-LOG_DIR = os.path.join(REPORT_DIR, "log")        # log thông tin thiết bị (trùng LOG_DIR trong config.sh)
 
 
 def read_config(*keys):
@@ -64,6 +63,7 @@ TERMINALS = [
 
 
 def open_in_terminal(command):
+    close_cluster_menu()             # menu chọn cụm còn mở sẽ đè lên cửa sổ terminal mới
     for name, builder in TERMINALS:
         if shutil.which(name):
             try:
@@ -102,7 +102,8 @@ def write_mac():
     mac_show = ":".join(mac_hex[i:i + 2] for i in range(0, 12, 2))
     if not messagebox.askyesno("Write MAC",
                                "Write MAC address %s to the device?\n\n"
-                               "This overwrites the Ethernet EEPROM and the device will reboot." % mac_show):
+                               "This overwrites the Ethernet EEPROM.\n"
+                               "Press Reboot Device afterwards to apply it." % mac_show):
         return
     mac_var.set(mac_show)
     run_mmi("--write-mac %s" % shlex.quote(mac_hex))
@@ -185,11 +186,20 @@ def explain_failure(out):
     return last
 
 
+def log_dir_of(out):
+    """Folder of this device (printed by run_mmi.sh as @@LOGDIR=...); reports/ when the device was not reached."""
+    for line in (out or "").splitlines():
+        if line.startswith("@@LOGDIR="):
+            return line.split("=", 1)[1].strip() or REPORT_DIR
+    return REPORT_DIR
+
+
 def save_gui_log(action, out, rc):
-    """Keep the raw output of the last Read / Reboot so a failure can be inspected: reports/log/gui_last_run.log"""
+    """Keep the raw output of the last Read / Reboot in the device's folder (gui_last_run.log)"""
     try:
-        os.makedirs(LOG_DIR, exist_ok=True)
-        with open(os.path.join(LOG_DIR, "gui_last_run.log"), "w", encoding="utf-8") as fh:
+        d = log_dir_of(out)
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, "gui_last_run.log"), "w", encoding="utf-8") as fh:
             fh.write("%s  %s --ip %s  rc=%s  transport=%s\n\n%s\n" % (
                 time.strftime("%F %T"), action, DEVICE_IP, rc, transport_var.get(), out))
     except OSError:
@@ -223,7 +233,7 @@ def finish_info(out, rc, action):
         set_status("%s  (%s, %s)" % (done, DEVICE_IP, time.strftime("%H:%M:%S")), "#1a7f37")
         return
     clear_info()
-    set_status("FAILED: " + explain_failure(out) + "  (log: reports/log/gui_last_run.log)", "#cf222e")
+    set_status("FAILED: " + explain_failure(out) + "  (log: %s)" % os.path.join(os.path.relpath(log_dir_of(out), TOOL_DIR), "gui_last_run.log"), "#cf222e")
 
 
 def run_info(action, what, timeout):
@@ -292,17 +302,59 @@ def pick_cluster(name):
     cluster_btn.focus_set()          # so that Enter works right away
 
 
-def show_cluster_menu(_event=None):
-    """Dropdown list right under the Test Cluster box (no extra window)."""
-    menu = tk.Menu(root, tearoff=0, font=(FONT, 11))
-    for name in CLUSTERS:
-        info = CLUSTER_INFO.get(name)
-        menu.add_command(label="%s  -  %s" % (name, info) if info else name,
-                         command=lambda n=name: pick_cluster(n))
+_cluster_menu = None
+
+
+def close_cluster_menu(_event=None):
+    """Đóng danh sách chọn cụm nếu đang mở (không làm gì nếu chưa mở)."""
+    global _cluster_menu
+    if _cluster_menu is None:
+        return
+    if _event is not None and str(getattr(_event, "widget", "")).startswith(str(_cluster_menu)):
+        return                                   # bấm vào chính danh sách: để mục đó tự xử lý
     try:
-        menu.tk_popup(cluster_box.winfo_rootx(), cluster_box.winfo_rooty() + cluster_box.winfo_height())
-    finally:
-        menu.grab_release()
+        _cluster_menu.destroy()
+    except tk.TclError:
+        pass
+    _cluster_menu = None
+
+
+def show_cluster_menu(_event=None):
+    """Danh sách cụm nằm TRONG cửa sổ chính (không phải cửa sổ riêng) nên thu nhỏ/di chuyển cửa sổ là đi theo."""
+    global _cluster_menu
+    close_cluster_menu()
+    f = tk.Frame(root, bd=1, relief="solid")
+    for name in CLUSTERS:
+        lb = tk.Label(f, text=name, font=(FONT, 11), anchor="w", padx=10, pady=5, bg="white")
+        lb.pack(fill="x")
+        lb.bind("<Enter>", lambda e: e.widget.config(bg="#cfe3ff"))
+        lb.bind("<Leave>", lambda e: e.widget.config(bg="white"))
+        lb.bind("<Button-1>", lambda e, n=name: (pick_cluster(n), close_cluster_menu()))
+    f.place(x=cluster_box.winfo_rootx() - root.winfo_rootx(),
+            y=cluster_box.winfo_rooty() - root.winfo_rooty() + cluster_box.winfo_height(),
+            width=cluster_box.winfo_width())
+    f.lift()
+    _cluster_menu = f
+
+
+_arrow_state = {"was_open": False}
+
+
+def arrow_press(_event=None):
+    """Ghi nhớ menu có đang mở không NGAY KHI bấm mũi tên (trước khi sự kiện bấm làm đóng menu)."""
+    try:
+        _arrow_state["was_open"] = bool(_cluster_menu is not None and _cluster_menu.winfo_ismapped())
+    except tk.TclError:
+        _arrow_state["was_open"] = False
+
+
+def toggle_cluster_menu():
+    """Bấm mũi tên: đang mở thì chỉ thu gọn, đang đóng thì mở."""
+    if _arrow_state["was_open"]:
+        _arrow_state["was_open"] = False
+        close_cluster_menu()
+    else:
+        show_cluster_menu()
 
 
 def run_selected_cluster(_event=None):
@@ -362,7 +414,7 @@ ttk.Label(conn_row, text=DEVICE_IP or "not set (config.sh)", font=(FONT_MONO, 11
 
 # ---- Device Info (left, top): Read / Reboot, result shown here (no terminal) ----
 info_box = ttk.LabelFrame(root, text=" Device Info ", padding=BOX_PAD)
-info_box.grid(row=4, column=0, sticky="nsew", padx=PAD_L, pady=(0, 16))
+info_box.grid(row=5, column=0, sticky="nsew", padx=PAD_L, pady=(0, 16))
 info_box.columnconfigure(0, weight=1, uniform="ibtn")
 info_box.columnconfigure(1, weight=1, uniform="ibtn")
 read_btn = ttk.Button(info_box, text="Read Chip ID / Serial", command=read_ids)
@@ -390,23 +442,20 @@ status_lbl.grid(row=2, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
 # ---- Write (right, top): MAC and Serial, each with its own button (the result opens in a terminal) ----
 mac_box = ttk.LabelFrame(root, text=" Write ", padding=BOX_PAD)
-mac_box.grid(row=4, column=1, sticky="nsew", padx=PAD_R, pady=(0, 16))
+mac_box.grid(row=5, column=1, sticky="nsew", padx=PAD_R, pady=(0, 16))
 mac_box.columnconfigure(0, weight=1)
 mac_var = tk.StringVar()
 serial_var = tk.StringVar()
-ttk.Label(mac_box, text="MAC, e.g. 74:25:84:C0:0F:08", foreground="gray", font=(FONT, 9)).grid(row=0, column=0, sticky="w")
+ttk.Label(mac_box, text="MAC Address", foreground="gray", font=(FONT, 9)).grid(row=0, column=0, sticky="w")
 ttk.Entry(mac_box, textvariable=mac_var, font=(FONT_MONO, 11)).grid(row=1, column=0, sticky="ew", pady=(2, 6), ipady=3)
 ttk.Button(mac_box, text="Write MAC", command=write_mac).grid(row=2, column=0, sticky="ew", pady=(0, 10))
-ttk.Label(mac_box, text="Serial, e.g. ABC12345", foreground="gray", font=(FONT, 9)).grid(row=3, column=0, sticky="w")
+ttk.Label(mac_box, text="Serial Number", foreground="gray", font=(FONT, 9)).grid(row=3, column=0, sticky="w")
 ttk.Entry(mac_box, textvariable=serial_var, font=(FONT_MONO, 11)).grid(row=4, column=0, sticky="ew", pady=(2, 6), ipady=3)
 ttk.Button(mac_box, text="Write Serial", command=write_serial).grid(row=5, column=0, sticky="ew")
-ttk.Label(mac_box, text="After writing, press Reboot Device and check Device Info.", font=(FONT, 9),
-          foreground="gray", wraplength=400).grid(row=6, column=0, sticky="w", pady=(8, 0))
-mac_box.rowconfigure(6, weight=1)
 
 # ---- Run Test (left, bottom) ----
 run_box = ttk.LabelFrame(root, text=" Run Test ", padding=BOX_PAD)
-run_box.grid(row=5, column=0, sticky="nsew", padx=PAD_L, pady=(0, 8))
+run_box.grid(row=4, column=1, sticky="nsew", padx=PAD_R, pady=(0, 8))
 run_box.columnconfigure(0, weight=1, uniform="run")
 run_box.columnconfigure(1, weight=1, uniform="run")
 ttk.Button(run_box, text="MMI Test 117", command=lambda: run_mmi("--all")).grid(
@@ -415,23 +464,25 @@ cluster_box = ttk.Frame(run_box)                 # [ cluster name ][ v ]
 cluster_box.grid(row=0, column=1, sticky="ew", padx=(4, 0))
 cluster_box.columnconfigure(0, weight=1)
 cluster_text = tk.StringVar(value="Test Cluster")
-cluster_btn = ttk.Button(cluster_box, textvariable=cluster_text)
+cluster_btn = ttk.Button(cluster_box, textvariable=cluster_text, command=run_selected_cluster)
 cluster_btn.grid(row=0, column=0, sticky="ew")
-for seq in ("<Double-Button-1>", "<Return>", "<KP_Enter>"):
+for seq in ("<Return>", "<KP_Enter>"):
     cluster_btn.bind(seq, run_selected_cluster)
-ttk.Button(cluster_box, text="\u25BC", width=3, command=show_cluster_menu).grid(row=0, column=1, padx=(2, 0))
-ttk.Label(run_box, text="Cluster: click the arrow to choose, then double-click it (or press Enter) to run.",
-          font=(FONT, 9), foreground="gray", wraplength=400).grid(row=1, column=0, columnspan=2, sticky="w", pady=(8, 0))
+arrow_btn = ttk.Button(cluster_box, text="\u25BC", width=3, command=toggle_cluster_menu)
+arrow_btn.grid(row=0, column=1, padx=(2, 0))
+arrow_btn.bind("<ButtonPress-1>", arrow_press, add="+")
+ttk.Button(run_box, text="Open Reports Folder", command=open_reports).grid(row=1, column=0, columnspan=2, sticky="ew", pady=(8, 0))
 
 # ---- Tools (right, bottom) ----
 tools_box = ttk.LabelFrame(root, text=" Tools ", padding=BOX_PAD)
-tools_box.grid(row=5, column=1, sticky="nsew", padx=PAD_R, pady=(0, 8))
+tools_box.grid(row=4, column=0, sticky="nsew", padx=PAD_L, pady=(0, 8))
 tools_box.columnconfigure(0, weight=1)
-ttk.Button(tools_box, text="Check / Install PC Tools", command=setup_pc).grid(row=0, column=0, sticky="ew", pady=(0, 8))
-ttk.Button(tools_box, text="Open Reports Folder", command=open_reports).grid(row=1, column=0, sticky="ew")
+tools_box.rowconfigure(0, weight=1)          # nút nằm giữa chiều cao ô, cân với ô Run Test
+ttk.Button(tools_box, text="Check / Install PC Tools", command=setup_pc).grid(row=0, column=0, sticky="ew")
 
 # Fixed width, height = what the content needs (never cut off, also on small screens)
 root.update_idletasks()
 root.geometry("%dx%d" % (940, int(root.winfo_reqheight())))
 
+root.bind("<Button-1>", close_cluster_menu, add="+")      # bấm ra ngoài thì đóng menu cụm
 root.mainloop()

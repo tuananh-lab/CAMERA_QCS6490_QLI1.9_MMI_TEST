@@ -2,7 +2,7 @@
 # 2. Ethernet - iperf3: PC chạy iperf3 server (tự bật/tắt), thiết bị chạy client.
 # Output iperf3 (dạng text như chạy tay) được in ra terminal + log + artifacts/iperf3_*.txt
 # Nhớ mở firewall PC cho cổng TCP $IPERF_PORT.
-: "${IPERF_BIDIR_MIN_MBPS:=700}"     # --bidir: mỗi chiều phải > 700 Mbps
+: "${IPERF_BIDIR_MIN_MBPS:=800}"     # --bidir: mỗi chiều phải > 800 Mbps
 
 CASES_ETHERNET=(
   "2.1|Kiểm tra tốc độ nhận|"
@@ -56,7 +56,7 @@ case_2_2() {
   else tc_fail "Truyền: ${m} Mbps (yêu cầu > ${IPERF_MIN_MBPS})"; fi
 }
 
-# 2.3: --bidir, mỗi chiều > IPERF_BIDIR_MIN_MBPS (700)
+# 2.3: --bidir, mỗi chiều > IPERF_BIDIR_MIN_MBPS (800)
 case_2_3() {
   local tx rx
   _eth_iperf bidir "--bidir" || return 0

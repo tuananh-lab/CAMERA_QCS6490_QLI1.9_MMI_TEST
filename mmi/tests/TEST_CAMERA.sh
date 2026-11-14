@@ -15,11 +15,13 @@ CASES_CAMERA=(
 # Chạy gst-launch nền CAM_RUN_S giây rồi SIGINT (-e: kết thúc EOS đúng chuẩn), kéo file mới nhất về PC.
 _cam_run() {
   local pipe="$1" pat="$2" dst="$3" out f
-  out="$(dev_script -t $((CAM_RUN_S + 45)) SECS="$CAM_RUN_S" <<EOF2
+  out="$(dev_script -t $((CAM_RUN_S + 45)) SECS="$CAM_RUN_S" FOCUS="${LENS_BIN:+$LENS_BIN ${LENS_I2C:-/dev/i2c-1} focus-set 50}" <<EOF2
 rm -f $pat
 $pipe 2>&1 &
 p=\$!
-sleep \$SECS
+sleep 2
+if [ -n "\$FOCUS" ]; then o=\$(\$FOCUS 2>&1); r=\$?; echo "[lens] focus-set 50 (camera đã mở): rc=\$r \$o"; fi
+sleep \$((SECS > 2 ? SECS - 2 : 0))
 kill -INT \$p 2>/dev/null
 i=0; while kill -0 \$p 2>/dev/null && [ \$i -lt 15 ]; do sleep 1; i=\$((i + 1)); done
 kill -9 \$p 2>/dev/null
@@ -27,6 +29,7 @@ echo "LASTFILE=\$(ls -t $pat 2>/dev/null | head -n 1)"
 EOF2
 )"
   save_artifact "gst_$(basename "$dst").log" "$out"
+  printf '%s\n' "$out" | sed -n 's/^\[lens\] */    lens_manage /p' | while IFS= read -r l; do say "$l"; done
   f="$(printf '%s\n' "$out" | sed -n 's/^LASTFILE=//p' | tail -n 1)"
   [ -n "$f" ] || { CAM_ERR="gst-launch không tạo file (xem artifacts/gst_$(basename "$dst").log)"; return 1; }
   dev_pull "$f" "$dst" 120 || { CAM_ERR="không kéo được $f về PC"; return 1; }
@@ -42,10 +45,37 @@ _probe() {
 _kv() { printf '%s\n' "$1" | sed -n "s/^$2=//p" | head -n 1; }
 _fps_ok() { awk -v f="$1" 'BEGIN{split(f,a,"/"); if (a[2]+0==0) exit 1; r=a[1]/a[2]; exit !(r>=29 && r<=31)}'; }
 
+# Trước khi chạy camera: calib zoom, focus, iris rồi đặt focus 50 (nét nhất). Chỉ làm 1 lần cho mỗi lần chạy MMI
+# (9.1/9.2/9.3 dùng chung). Lỗi/thiếu lens_manage chỉ cảnh báo, không làm hỏng bài.
+_CAM_FOCUS_DONE=0
+_cam_focus() {
+  local c out rc
+  [ "$_CAM_FOCUS_DONE" = 1 ] && return 0
+  _CAM_FOCUS_DONE=1
+  if [ -z "${LENS_BIN:-}" ]; then say "  ${C_Y}Không có lens_manage trên thiết bị: bỏ qua calib / focus 50${C_0}"; return 0; fi
+  for c in "calib zoom" "calib focus" "calib iris" "focus-set 50"; do
+    say "  lens_manage $c ..."
+    out="$(dev_sh_t "${LENS_CALIB_TIMEOUT:-180}" "$LENS_BIN ${LENS_I2C:-/dev/i2c-1} $c 2>&1")"; rc=$?
+    say "    rc=$rc ${out:0:150}"
+    [ $rc -eq 0 ] || say "  ${C_Y}Cảnh báo: lens_manage $c lỗi, vẫn chạy tiếp${C_0}"
+  done
+  sleep 1
+}
+
+# Đặt lại focus 50 NGAY SAU KHI camera đã mở (qtiqmmfsrc mở camera có thể đưa lens về 0, nên focus đặt trước đó bị mất).
+# Dùng cho 9.3 (RTSP); 9.1/9.2 làm việc này ngay trong _cam_run.
+_cam_focus_set() {
+  local out rc
+  [ -n "${LENS_BIN:-}" ] || return 0
+  out="$(dev_sh_t 30 "$LENS_BIN ${LENS_I2C:-/dev/i2c-1} focus-set 50 2>&1")"; rc=$?
+  say "  lens_manage focus-set 50 (sau khi camera mở): rc=$rc ${out:0:150}"
+}
+
 _cam_need() {
   tc_need gst-launch-1.0 || return 1
   rtsp_teardown                      # camera chỉ mở được bởi 1 tiến trình: tắt RTSP nếu đang chạy
   command -v ffprobe >/dev/null || { tc_skip "PC thiếu ffprobe (sudo apt install ffmpeg)"; return 1; }
+  _cam_focus
   return 0
 }
 
@@ -117,10 +147,12 @@ case_9_3() {
   local res w h detail="" bad="" unans=0 y
   tc_need gst-rtsp-server || return 0
   command -v ffmpeg >/dev/null || { tc_skip "PC thiếu ffmpeg (chạy: bash setup_pc.sh)"; return 0; }
+  _cam_focus
   for res in $RTSP_TEST_RES; do
     w="${res%x*}"; h="${res#*x}"
     say "  Bật RTSP ${w}x${h}: $(rtsp_url)"
     if ! rtsp_start "$w" "$h"; then bad="$bad ${w}x${h}($RTSP_MSG);"; continue; fi
+    _cam_focus_set
     if ! rtsp_check "$w" "$h"; then bad="$bad ${w}x${h}($RTSP_MSG);"; rtsp_stop; continue; fi
     detail="$detail ${w}x${h}: $RTSP_INFO;"
     say "  Stream OK: $RTSP_INFO"

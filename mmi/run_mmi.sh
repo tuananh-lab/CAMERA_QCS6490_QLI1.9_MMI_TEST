@@ -31,6 +31,7 @@ MMI_TMP="$(mktemp -d /tmp/mmi.XXXXXX)"
 # Thoát bình thường / Ctrl-C / lỗi: khôi phục thiết bị; nếu đang chạy dở thì vẫn xuất báo cáo (INCOMPLETE)
 ABORTED=0; REPORT_READY=0; REPORT_DONE=0; PAUSED=0
 on_exit() {
+  [ "$CONN_LOST" = 1 ] && DEV_TIMEOUT=5     # đã mất kết nối: mỗi lệnh dọn dẹp chỉ chờ 5s, không treo 30s/lệnh
   run_cleanups
   if [ "$REPORT_READY" = 1 ] && [ "$REPORT_DONE" != 1 ]; then ABORTED=1; finish_report; fi
   command -v tp_close >/dev/null && tp_close
@@ -226,11 +227,10 @@ done
 [ "$MODE" = list ] && { list_cases; exit 0; }
 
 # Thông tin thiết bị (đọc Chip ID / ghi Serial / ghi MAC / reboot): mọi thứ hiện trên màn hình + output thô của thiết bị
-# được ghi nối tiếp vào reports/log/deviceinfo.log (say() ghi vào $LOG_FILE). Quá 2 MB thì đổi tên thành deviceinfo.log.old
+# được ghi nối tiếp vào deviceinfo.log TRONG thư mục lần test của thiết bị đó (devlog_resolve, sau khi kết nối).
+# Trước khi kết nối chưa biết thiết bị nào nên ghi tạm vào $MMI_TMP, rồi gộp vào thư mục thiết bị.
 if [[ "$MODE" =~ ^(writemac|readid|writeserial|reboot)$ ]]; then
-  mkdir -p "$LOG_DIR" 2>/dev/null
-  LOG_FILE="$LOG_DIR/deviceinfo.log"
-  [ "$(stat -c %s "$LOG_FILE" 2>/dev/null || echo 0)" -gt 2097152 ] && mv -f "$LOG_FILE" "$LOG_FILE.old"
+  LOG_FILE="$MMI_TMP/deviceinfo.tmp"
   printf '\n================ %s  %s %s%s ================\n' "$(date '+%F %T')" "$MODE" "${WRITE_SERIAL:-}" "${WRITE_MAC:-}" >> "$LOG_FILE"
 fi
 
@@ -287,6 +287,11 @@ if ! wait_device "$CONNECT_TIMEOUT"; then
 fi
 echo "$DEVICE_IP" > "$LAST_IP_FILE"
 detect_mac_iface
+if [[ "$MODE" =~ ^(writemac|readid|writeserial|reboot)$ ]]; then
+  devlog_resolve
+  cat "$LOG_FILE" >> "$LOG_DIR/deviceinfo.log" 2>/dev/null; LOG_FILE="$LOG_DIR/deviceinfo.log"
+  [ "${MMI_MACHINE:-0}" = 1 ] && printf '@@LOGDIR=%s\n' "$LOG_DIR"      # tool.py ghi gui_last_run.log vào cùng thư mục
+fi
 dilog "PC: $(hostname)  Kết nối: $(tp_describe)  MAC_IFACE: $MAC_IFACE"
 
 # Chế độ ghi MAC: không chạy test, ghi MAC rồi thoát
@@ -310,12 +315,14 @@ esac
 
 # Device ID = SERIAL (getprop ro.serialno). Serial được ghi bằng nút "Write Serial" và chỉ có hiệu lực SAU KHI REBOOT.
 # Đọc lỗi / chưa ghi serial thì KHÔNG dùng chuỗi lỗi làm tên báo cáo:
-#   mặc định (DEVID_REQUIRED=1) -> dừng, yêu cầu ghi serial + reboot trước; DEVID_REQUIRED=0 -> chạy tiếp với ID = unknown.
+#   DEVID_REQUIRED=1 -> dừng, yêu cầu ghi serial + reboot trước; DEVID_REQUIRED=0 (mặc định trong config.sh) -> chạy tiếp với ID = unknown.
 DEV_ID="$(dev_val 'getprop ro.serialno 2>/dev/null' | head -n 1 | tr -d '\r')"
+DEV_CHIP="$(dev_val 'getprop ro.chipid 2>/dev/null' | head -n 1 | tr -d '\r')"
+DEV_MAC="$(dev_val "$SERIAL_CMD" | head -n 1 | tr -d '\r:' | tr 'a-f' 'A-F')"
+[[ "$DEV_MAC" =~ ^[0-9A-F]{12}$ ]] || DEV_MAC=""
 if ! [[ "$DEV_ID" =~ ^[A-Za-z0-9_-]{1,32}$ ]] || [ "$DEV_ID" = unknown ]; then
   # Chưa có Serial hợp lệ -> dùng MAC ethernet (không dấu ':', viết hoa) làm Device ID
-  DEV_MAC="$(dev_val "$SERIAL_CMD" | head -n 1 | tr -d '\r:' | tr 'a-f' 'A-F')"
-  if [[ "$DEV_MAC" =~ ^[0-9A-F]{12}$ ]]; then
+  if [ -n "$DEV_MAC" ]; then
     say "${C_Y}Chưa có Serial (ro.serialno = '${DEV_ID:0:40}') -> dùng MAC $MAC_IFACE làm Device ID: $DEV_MAC${C_0}"
     DEV_ID="$DEV_MAC"
   elif [ "${DEVID_REQUIRED:-1}" = 1 ]; then
@@ -329,7 +336,7 @@ DEV_CPU="$(dev_val nproc | head -n 1)"
 if [ -z "${HSP_ID:-}" ] && [ "${MMI_NONINTERACTIVE:-0}" != "1" ]; then
   # Sản xuất: bắt buộc nhập/quét số tem để truy vết (HSP_ID_REQUIRED=0 cho phép Enter bỏ qua)
   while true; do
-    read -r -p "Nhập/quét số tem HSPTek$([ "${HSP_ID_REQUIRED:-1}" = 1 ] && echo ' (bắt buộc)' || echo ' (Enter = bỏ qua)'): " HSP_ID </dev/tty || break
+    read -r -p "Nhập/quét số tem HSPTek$([ "${HSP_ID_REQUIRED:-1}" = 1 ] && echo ' (bắt buộc)' || echo ' (Enter = bỏ qua)'): " HSP_ID </dev/tty || { [ "${HSP_ID_REQUIRED:-1}" = 1 ] && die "Không đọc được số tem từ bàn phím (không có terminal)"; break; }
     HSP_ID="${HSP_ID//[^A-Za-z0-9_-]/}"
     [ -n "$HSP_ID" ] && break
     [ "${HSP_ID_REQUIRED:-1}" = 1 ] || break

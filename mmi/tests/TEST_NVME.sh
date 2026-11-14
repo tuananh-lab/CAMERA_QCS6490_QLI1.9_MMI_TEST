@@ -7,9 +7,9 @@
 : "${NVME_FIO_SIZE:=2G}"
 
 CASES_NVME=(
-  "3.1|Kiểm tra NVME|"
-  "3.2|Kiểm tra tốc độ ghi của NVME|"
-  "3.3|Kiểm tra tốc độ đọc của NVME|"
+  "3.1|Kiểm tra NVME|clusteronly"
+  "3.2|Kiểm tra tốc độ ghi của NVME|clusteronly"
+  "3.3|Kiểm tra tốc độ đọc của NVME|clusteronly"
 )
 
 case_3_1() {

@@ -1,7 +1,7 @@
 # HSP-117 Camera Bullet (QCS6490, QLI 1.9) - MMI TEST
 
 Chạy trên **PC Ubuntu**, kết nối camera qua **adb IP** (mặc định) hoặc **ssh**.
-12 nhóm, 46 mục.
+12 nhóm, 46 mục (NVME 3.1-3.3, SD_CARD 6.1-6.3 và 10.2 WSA chỉ chạy khi test cụm hoặc `--case`, không chạy trong `--all`).
 
 ## 1. Chạy test (người vận hành)
 
@@ -36,21 +36,22 @@ Máy PC mới: `bash setup_pc.sh` (tự kiểm tra/cài adb, iperf3, ffmpeg, vlc
 | Nhóm       | Cần chuẩn bị                                                                 |
 |------------|------------------------------------------------------------------------------|
 | 2 ETHERNET | PC cùng mạng với camera (PC tự bật iperf3 server)                            |
-| 3 NVME     | Lắp NVMe. Không có thì mục FAIL                                              |
+| 3 NVME     | Chỉ chạy khi test cụm / `--case`. Lắp NVMe, không có thì mục FAIL            |
 | 4 GPS      | Đặt ăng-ten ngoài trời, nhìn thấy bầu trời. Trong nhà 4.2-4.5 sẽ FAIL        |
-| 5 RTC      | 5.4/5.5 cần rút/cấp nguồn (xem mục 3)                                        |
-| 6 SD_CARD  | Cắm thẻ SD. Không có thì mục FAIL                                            |
+| 5 RTC      | 5.4/5.5: tool dừng chờ bạn rút/cấp nguồn; 5.5 rút cáp Ethernet trước, cắm lại sau |
+| 6 SD_CARD  | Chỉ chạy khi test cụm / `--case`. Cắm thẻ SD, không có thì mục FAIL          |
 | 8 ALARM_IO | Đứng gần camera để nghe tiếng rơ-le "tạch tạch"                              |
 | 9 CAMERA   | PC có màn hình (tool tự mở VLC xem RTSP). Đặt vật có chi tiết trước ống kính |
-| 10 AUDIO   | Loa trong; jack loa cắm Line Out, jack mic cắm Line In khi tool yêu cầu      |
+| 10 AUDIO   | Line In nối sẵn với cổng ra âm thanh PC (tool tự phát tone 1 kHz); Line Out cắm loa |
 | 11 LENS    | Như CAMERA (xem hình qua RTSP). Mỗi lệnh set lens có trễ 1 giây (xem mục 6)  |
 
 ## 3. Quy tắc kết quả
 
 - Mỗi mục chỉ **PASS** hoặc **FAIL**. Mục không thực hiện được (thiếu thiết bị/tool, chưa xác nhận,
   mất kết nối) đều tính **FAIL** kèm lý do "Không thực hiện được: ...".
-- **5.4/5.5 (rút nguồn)** không chạy trong `--all` nên tính FAIL. Muốn chạy:
-  `./mmi/run_mmi.sh --all --heavy` (hoặc `--case 5.4,5.5`). Bỏ qua hai mục này thì không có PASS toàn bộ.
+- **5.4/5.5 (rút nguồn)** chạy cùng `--all`; tool dừng chờ người test rút/cấp nguồn rồi nhấn Enter
+  (5.5: rút cáp Ethernet trước khi rút nguồn, cắm lại sau khi cấp nguồn). Chạy không có người
+  (`MMI_NONINTERACTIVE=1`) thì hai mục này FAIL vì không thực hiện được.
 - Bị dừng giữa chừng (Ctrl-C, tắt terminal): tool khôi phục thiết bị và vẫn xuất báo cáo,
   kết luận **INCOMPLETE** (không bao giờ là PASS).
 - Mất kết nối quá `CONNECT_TIMEOUT` (10s): mục đang chạy ghi FAIL, dừng test, vẫn xuất báo cáo.
@@ -81,29 +82,37 @@ Mỗi sensor có kiểu dữ liệu riêng, tool kiểm tra dữ liệu **khác 
 
 ## 4. Tra lỗi
 
-Mỗi lần test tạo **đúng một thư mục** `reports/<tên>/` chỉ chứa 3 file cùng tên
-(`<tên>` = `HSP-117_<tem>_<DEVICE ID>_<giờ>[_<CỤM>]_<PASS|FAIL|INCOMPLETE>`):
+Mỗi thiết bị chỉ có **một thư mục** `reports/<tên>/`
+(`<tên>` = `HSP-117_<tem>_<DEVICE ID>_<giờ>[_<CỤM>]_<PASS|FAIL|INCOMPLETE>`). Lần test tạo 3 file cùng tên:
 
 - `<tên>.html`: báo cáo gửi đi/lưu trữ (kết quả theo thứ tự thực thi + log chi tiết).
 - `<tên>.log`: log đầy đủ (gồm câu trả lời Y/N của người test). Cuối file có **PHỤ LỤC** dữ liệu thô
   từng mục, tìm theo `### artifacts/<tên file>`; ảnh/video/wav không lưu.
 - `<tên>.csv`: bảng kết quả từng mục (UTF-8, mở được bằng Excel).
 
-Log thông tin thiết bị (Read Chip ID, Write Serial, Write MAC, Reboot) gom chung trong `reports/log/`:
+Sau đó Read Chip ID, Write Serial, Write MAC, Reboot ghi log **vào cùng thư mục** (tool nhận ra đúng thiết bị
+bằng Chip ID hoặc MAC):
 
 | File              | Nội dung                                                                 |
 |-------------------|--------------------------------------------------------------------------|
 | deviceinfo.log    | Log đầy đủ, nối tiếp, có giờ (getprop, boot_id, hexdump devinfo, EEPROM) |
 | devinfo_log.csv   | Tóm tắt Read / Write Serial / Reboot dạng bảng                           |
 | mac_write_log.csv | Tóm tắt mỗi lần ghi MAC                                                  |
-| gui_last_run.log  | Output thô của lần Read / Reboot gần nhất trên giao diện                 |
+| gui_last_run.log  | Output thô của lần Read / Reboot gần nhất trên giao diện (tool.py)       |
+
+Quy trình sản xuất: test cụm/full → Write Serial, Write MAC → Read lại → Reboot: tất cả nằm trong một thư mục.
+Đọc/ghi thông tin trước khi test: tool tạo thư mục `*_DEVINFO`, lần test sau của thiết bị đó dùng lại và đổi tên
+theo kết quả. Tool chỉ nhớ thiết bị test gần nhất (`reports/.last_run`), nên làm trọn một thiết bị rồi mới sang
+thiết bị khác. Không kết nối được thiết bị thì không có log nào được ghi (lỗi hiện trên màn hình).
 
 Khi ghi serial/MAC không ăn, gửi file `deviceinfo.log` để tra nguyên nhân.
 
 ## 5. An toàn dữ liệu / thiết bị
 
 - Các thay đổi trên thiết bị (giờ hệ thống + RTC, GPIO alarm, pipewire, RTSP, iperf3 server)
-  đều được khôi phục khi kết thúc hoặc Ctrl-C.
+  đều được khôi phục khi kết thúc hoặc Ctrl-C. Riêng 5.4/5.5 tạm tắt dịch vụ đồng bộ giờ
+  (timesyncd/chronyd/ntpd, danh sách ghi ở `/etc/mmi_ntp_svcs`) và bật lại sau khi đọc xong;
+  nếu bị ngắt giữa chừng, lần chạy RTC kế tiếp tự bật lại.
 - **NVMe/SD (3.2, 3.3, 6.2, 6.3):** nếu phân vùng đang mount thì đo bằng file tạm (an toàn).
   Nếu **không mount** thì **ghi/đọc thô trực tiếp thiết bị** (ghi thô sẽ xoá dữ liệu/bảng phân vùng
   ở đầu đĩa). Chỉ dùng với ổ trắng/ổ test.
@@ -180,7 +189,7 @@ Luồng (`mmi/lib/mac_write.sh`):
 
 Ghi chú:
 
-- Kết quả mỗi lần ghi nằm trong `reports/log/mac_write_log.csv`.
+- Kết quả mỗi lần ghi nằm trong `mac_write_log.csv` trong thư mục của thiết bị (mục 4).
 - Cần có `mmi/mac/template.bin` (file MAC 254 byte đang dùng được) và `MAC_TEMPLATE_MAC` trong
   `config.sh` = MAC nằm trong file đó.
 - Kiểm tra "chỉ cần thay MAC" bằng 2 file thật:
@@ -188,4 +197,4 @@ Ghi chú:
 - Đổi MAC có thể làm đổi IP (DHCP): nếu sau reboot không kết nối lại được, tool báo
   "đã ghi, chưa kiểm tra được"; tìm IP mới rồi kiểm tra `cat /sys/class/net/eth0/address`.
 - Không reboot tự động: `MAC_REBOOT_AFTER=0`.
-- Log đọc/ghi thông tin thiết bị xem mục 4 (`reports/log/`).
+- Log đọc/ghi thông tin thiết bị xem mục 4.

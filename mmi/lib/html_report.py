@@ -91,7 +91,7 @@ page = """<!DOCTYPE html>
     <img class="qr" src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={dev_q}" alt="QR {dev}" onerror="this.hidden=true">
     <div>
       {hsp_block}
-      <div class="idlabel">Serial number</div>
+      <div class="idlabel">Device ID</div>
       <div class="serial">{dev}</div>
       <div class="meta">
         <span>Bắt đầu: {start}</span>

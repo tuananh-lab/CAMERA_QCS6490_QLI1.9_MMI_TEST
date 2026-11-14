@@ -50,7 +50,7 @@ EOF2
 }
 
 case_11_1() { _lens_seq "Zoom"  "Trên stream, hình ảnh phóng to/thu nhỏ tương ứng với zoom 500 -> 100 -> 0?" "calib zoom|zoom-set 500|zoom-set 100|zoom-set 0"; }
-case_11_2() { _lens_seq "Focus" "Trên stream, độ nét hình ảnh thay đổi tương ứng với focus 500 -> 50 -> 0?" "calib focus|focus-set 500|focus-set 50|focus-set 0"; }
+case_11_2() { _lens_seq "Focus" "Trên stream, độ nét hình ảnh thay đổi tương ứng với focus 500 -> 0 -> 50?" "calib focus|focus-set 500|focus-set 0|focus-set 50"; }
 case_11_3() { _lens_seq "Iris"  "Trên stream, iris đóng/mở tương ứng với giá trị 100 -> 50 -> 0 (hình ảnh sáng/tối thay đổi)?" "calib iris|iris-set 100|iris-set 50|iris-set 0"; }
 case_11_4() { _lens_seq "IR CUT" "Trên stream, IR CUT đóng/mở đúng theo lệnh open -> close (nghe tiếng tách/hình đổi màu-đen trắng)?" "ircut open|ircut close"; rtsp_teardown; }   # hết IR CUT: đóng vlc + tắt RTSP
 case_11_7() { LENS_NEED_STREAM=0 _lens_seq "IR LED" "IR LED bật/tắt đúng theo lệnh on -> off (hình sáng lên/tối đi trong môi trường tối)?" "irled on|irled off"; }   # IR LED: không cần stream

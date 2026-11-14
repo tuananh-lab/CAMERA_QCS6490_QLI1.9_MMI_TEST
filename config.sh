@@ -41,7 +41,10 @@ REMOTE_TMP="/tmp"
 
 # ---- Báo cáo -------------------------------------------------------------------
 REPORT_ROOT="$CFG_DIR/reports"                 # mỗi lần test = 1 thư mục con reports/<tên>/
-LOG_DIR="$REPORT_ROOT/log"                     # log thông tin thiết bị: deviceinfo.log, devinfo_log.csv, mac_write_log.csv, gui_last_run.log
+# LOG_DIR = thư mục chứa log thông tin thiết bị (deviceinfo.log, devinfo_log.csv, mac_write_log.csv, gui_last_run.log).
+# Khi Read/Write Serial/Write MAC/Reboot chạy, run_mmi.sh tự đặt LOG_DIR = thư mục lần test của CHÍNH thiết bị đó
+# (reports/<tên lần test>/), nên mỗi thiết bị chỉ có 1 thư mục. Giá trị dưới đây chỉ là mặc định.
+LOG_DIR="$REPORT_ROOT"
 
 # ---- Thứ tự nhóm test (theo tài liệu test 117) ---------------------------------
 TEST_GROUPS_ALL="COM ETHERNET NVME GPS RTC SD_CARD TPM ALARM_IO CAMERA AUDIO LENS SENSOR"
@@ -79,7 +82,6 @@ I2C_GATES=(
 : "${RTSP_PROBE_S:=6}"                   # 9.3: thời gian nhận stream để đếm frame (giây)
 : "${RTSP_MIN_FPS:=25}"                  # 9.3: fps tối thiểu đo được (stream 30fps)
 : "${RTSP_START_TIMEOUT:=20}"            # chờ gst-rtsp-server mở cổng (giây)
-: "${RTSP_VIEW_S:=8}"                    # 9.3: thời gian mở cửa sổ xem cho người test (giây)
 : "${RTSP_VIEWER:=vlc}"                  # vlc (mặc định) | ffplay | auto | none  (VLC đơ/lỗi: đặt ffplay)
 : "${RTSP_VLC_CACHE_MS:=100}"           # VLC network/live caching (ms): 100 = 0,1s (mặc định VLC 1000)
 : "${RTSP_VLC_FALLBACK:=1}"             # 1 = VLC không mở được / thoát ngay => tự dùng ffplay

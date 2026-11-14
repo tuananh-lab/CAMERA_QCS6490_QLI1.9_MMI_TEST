@@ -5,7 +5,7 @@
 #   2. Push lên thiết bị ($MAC_DEV_DIR/<MAC>), chạy: ethtool -E $MAC_IFACE magic 0x78A5 offset 0 length 254 < file
 #   3. Đọc lại EEPROM so sánh (sha1sum)
 #   4. Reboot (MAC_REBOOT_AFTER=1), chờ thiết bị lên lại, kiểm tra MAC của $MAC_IFACE đã đổi
-#  Kết quả được ghi thêm vào reports/mac_write_log.csv (tóm tắt) và reports/deviceinfo.log (log đầy đủ). Return: 0 = OK, 1 = lỗi, 2 = đã ghi nhưng chưa kiểm tra được.
+#  Kết quả được ghi thêm vào mac_write_log.csv (tóm tắt) và deviceinfo.log (log đầy đủ) trong thư mục lần test của thiết bị (LOG_DIR). Return: 0 = OK, 1 = lỗi, 2 = đã ghi nhưng chưa kiểm tra được.
 # =============================================================================
 : "${MAC_IFACE:=eth0}"
 : "${MAC_EEPROM_MAGIC:=0x78A5}"
@@ -17,9 +17,10 @@
 : "${MAC_ADDR_FILE:=/sys/class/net/$MAC_IFACE/address}"
 
 _mac_log() {   # _mac_log <MAC cũ> <MAC mới> <kết quả>
-  mkdir -p "$REPORT_ROOT" 2>/dev/null
-  [ -s "$REPORT_ROOT/mac_write_log.csv" ] || printf '\xef\xbb\xbf%s\n' 'Thời gian,PC,Kết nối,MAC cũ,MAC mới,Kết quả' > "$REPORT_ROOT/mac_write_log.csv"
-  printf '%s,%s,%s,%s,%s,%s\n' "$(date '+%F %T')" "$(hostname)" "$(tp_describe)" "$1" "$2" "$3" >> "$REPORT_ROOT/mac_write_log.csv"
+  mkdir -p "$LOG_DIR" 2>/dev/null
+  [ -s "$LOG_DIR/mac_write_log.csv" ] || printf '\xef\xbb\xbf%s\n' 'Thời gian,PC,Kết nối,MAC cũ,MAC mới,Kết quả' > "$LOG_DIR/mac_write_log.csv"
+  printf '%s,%s,%s,%s,%s,%s\n' "$(date '+%F %T')" "$(hostname)" "$(tp_describe)" "$1" "$2" "$3" >> "$LOG_DIR/mac_write_log.csv"
+  case "$3" in OK*|WRITTEN*) devlog_pointer_add_mac "$2" ;; esac     # MAC đã đổi: vẫn nhận ra thiết bị ở lần Read/Reboot sau
   dilog "KẾT QUẢ: WRITE_MAC  MAC cũ=$1  MAC mới=$2  =>  $3"
 }
 

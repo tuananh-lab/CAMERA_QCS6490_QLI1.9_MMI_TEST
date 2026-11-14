@@ -12,8 +12,6 @@
 : "${DEVINFO_DEV:=/dev/disk/by-partlabel/devinfo}"
 : "${SERIAL_MAXLEN:=32}"
 : "${DEVINFO_REBOOT_AFTER:=0}"      # 1 = tự reboot ngay sau khi ghi Serial (mặc định: dùng nút Reboot riêng)
-: "${REBOOT_SETTLE:=5}"            # chờ dịch vụ lên đủ sau khi thiết bị trả lời (giây)
-: "${REBOOT_DOWN_WAIT:=10}"         # chờ thiết bị THỰC SỰ tắt sau mỗi lần gửi lệnh reboot (giây)
 
 _di_log() {   # _di_log <hành động> <chip id> <serial cũ> <serial mới> <kết quả>
   mkdir -p "$LOG_DIR" 2>/dev/null
@@ -127,31 +125,33 @@ EOF2
 }
 
 devinfo_reboot_flow() {
-  local t0 dt b0 b1 i m out rc down=0 ok=0
+  local t0 dt b0 b1 i ok=0 shown=0 rb
   b0="$(_di_boot_id)"
-  say "Reboot thiết bị ...   (boot_id hiện tại: ${b0:-không đọc được})"
+  say "Reboot thiết bị (ép buộc -f) ... (boot_id hiện tại: ${b0:-không đọc được})"
   t0=$SECONDS
 
-  # Bước 1: Gửi lệnh reboot và nhanh chóng kiểm tra thiết bị mất kết nối (tối đa 8s)
-  for m in A B; do
-    out="$(tp_reboot "$m")"; rc=$?
-    dilog "lệnh reboot cách $m: rc=$rc  output='$out'"
-    say "  Đã gửi lệnh reboot, chờ thiết bị ngắt kết nối..."
-    for ((i = 0; i < 8; i++)); do
-      tp_ready 3 || { down=1; break; }
-      sleep 1
-    done
-    [ "$down" = 1 ] && break
-  done
+  # Gửi lệnh ép reboot cứng qua adb
+  rb="$(tp_reboot A 2>&1)"
+  dilog "tp_reboot: ${rb:-<không có output>}"
+  [ -n "$rb" ] && say "$(printf '%s\n' "$rb" | sed 's/^/  /' | head -n 8)"
+  say "  Đã gửi lệnh reboot, chờ thiết bị ngắt kết nối..."
 
-  # Bước 2: Chờ thiết bị khởi động lại (giảm tổng thời gian chờ lên lại)
+  # Chờ thiết bị THẬT SỰ tắt (ping mất, tối đa 60s) rồi mới chờ nó lên lại. Nếu bỏ bước này, tool có thể kết nối lại
+  # nhầm vào thiết bị cũ chưa kịp tắt (adb đã bị ngắt từ trước nên tp_ready luôn báo "đã ngắt").
+  for ((i = 0; i < 60; i++)); do
+    ping -c 1 -W 1 "$DEVICE_IP" >/dev/null 2>&1 || { ok=1; break; }
+    sleep 1
+  done
+  [ "$ok" = 1 ] || say "  ${C_Y}Thiết bị vẫn trả lời ping sau 60s: lệnh reboot có thể không có tác dụng${C_0}"
+
+  # Chờ thiết bị khởi động lại (tối đa REBOOT_WAIT giây, trả về ngay khi thiết bị lên)
   say "  Chờ thiết bị khởi động lại..."
-  if ! wait_device 60; then
+  if ! wait_device "$REBOOT_WAIT"; then
     _di_banner FAIL "KHÔNG KẾT NỐI LẠI SAU REBOOT"; _di_log REBOOT "" "" "" "FAIL(no reconnect)"; return 1
   fi
-  dt=$((SECONDS - t0)); sleep "$REBOOT_SETTLE"
+  dt=$((SECONDS - t0)); sleep 2  # Dừng 2s ổn định ban đầu
 
-  # Bước 3: Xác thực boot_id đã thay đổi để chắc chắn thiết bị đã reboot thật
+  # Xác thực boot_id đã thay đổi thành công
   b1="$(_di_boot_id)"
   dilog "boot_id trước='$b0'  sau='$b1'"
   if [ -n "$b0" ] && [ -n "$b1" ] && [ "$b0" = "$b1" ]; then
@@ -159,8 +159,22 @@ devinfo_reboot_flow() {
     _di_log REBOOT "" "" "" "FAIL(no reboot)"; return 1
   fi
 
-  # Bước 4: Đọc lại thông tin ngay khi dịch vụ sẵn sàng
-  for i in 1 2; do devinfo_show && { ok=1; break; }; sleep 2; done
+  # Đọc lại thông tin với vòng lặp retry (thử tối đa 5 lần, mỗi lần cách nhau 2s để chờ services init xong hẳn)
+  ok=0
+  for ((i = 1; i <= 5; i++)); do
+    if devinfo_show; then
+      shown=1
+      # Chip ID (hoặc Serial) đã có thì dừng chờ ngay; máy chưa ghi thì đọc đủ số lần rồi vẫn coi là OK
+      if [ -n "$DI_CHIP" ] || [ -n "$DI_SERIAL" ]; then
+        ok=1
+        break
+      fi
+    fi
+    say "  Đang đợi dịch vụ hệ thống nạp thông tin (lần $i/5)..."
+    sleep 2
+  done
+
+  [ "$ok" = 1 ] || [ "$shown" = 1 ] && ok=1      # getprop trả lời được = đọc thành công (Chip ID/Serial trống là chưa ghi, không phải lỗi)
   if [ "$ok" != 1 ]; then
     _di_banner FAIL "KHÔNG ĐỌC ĐƯỢC CHIP ID SAU REBOOT"; _di_log REBOOT "" "" "" "FAIL(read after reboot)"; return 1
   fi
