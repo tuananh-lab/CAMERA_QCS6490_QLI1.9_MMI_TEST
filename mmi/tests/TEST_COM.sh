@@ -1,4 +1,7 @@
 #!/bin/bash
+# Fix issue conflict locale
+export LC_ALL=C
+
 # 1. COM: kiểm tra CPU / RAM / storage của module COM (QCS6490)
 : "${COM_CPU_CORES:=8}"               # số core yêu cầu
 : "${COM_RAM_TOTAL_MIN_GIB:=7.2}"     # tổng RAM tối thiểu (GiB, làm tròn 1 số lẻ như 'free -h')

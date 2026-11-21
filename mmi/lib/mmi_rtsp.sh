@@ -12,7 +12,10 @@
 #  Lỗi để lại trong $RTSP_MSG. Camera chỉ mở được bởi MỘT tiến trình: 9.1/9.2 phải tắt RTSP trước.
 # =============================================================================
 RTSP_ACTIVE=0; RTSP_RES=""; RTSP_VIEWER_PID=""; RTSP_HOOKED=0; RTSP_MSG=""; RTSP_INFO=""
-: "${RTSP_VIEWER_WAIT_S:=3}"      # chờ cửa sổ xem (VLC/ffplay) mở xong, có đếm ngược (giây)
+: "${RTSP_VIEWER_WAIT_S:=2}"      # chờ ngầm (không hiển thị) sau khi mở VLC/ffplay để biết nó có chạy được không (giây)
+RTSP_VIEWER_LOG="${MMI_TMP:-/tmp}/rtsp_viewer.log"   # lỗi của player (vlc/ffplay) để biết vì sao không mở được
+: "${RTSP_STREAM_BITRATE:=4000000}"   # bitrate stream RTSP (theo lệnh stream mới; RTSP_BITRATE trong config.sh không còn dùng)
+: "${RTSP_GOP:=30}"                 # video_gop_size của bộ mã hoá H.264 khi stream
 : "${RTSP_START_WAIT_S:=15}"      # đếm ngược hiện NGAY khi bắt đầu bật stream (tới lúc stream sẵn sàng), để người test biết VLC sắp mở
 
 # Đếm lùi N giây trên terminal (1 dòng cập nhật liên tục); không phải terminal thì chỉ chờ
@@ -34,15 +37,15 @@ _rtsp_cd_start() {
   [ -n "${LOG_FILE:-}" ] && echo "  Đang bật stream RTSP, VLC sẽ tự mở sau khoảng ${t}s" >> "$LOG_FILE"
   [ -t 1 ] || return 0
   ( n=$t; while [ "$n" -gt 0 ]; do
-      printf '\r  Đang bật stream, VLC sẽ tự mở sau khoảng %ds - vui lòng chờ: còn %2ds   ' "$t" "$n"; sleep 1; n=$((n - 1))
-    done; printf '\r%*s\r' 90 '' ) &
+      printf '\r  VLC mở sau: %ds   ' "$n"; sleep 1; n=$((n - 1))
+    done; printf '\r\033[K' ) &
   _RTSP_CD_PID=$!; disown "$_RTSP_CD_PID" 2>/dev/null
   return 0
 }
 _rtsp_cd_stop() {
   [ -n "$_RTSP_CD_PID" ] || return 0
   kill "$_RTSP_CD_PID" 2>/dev/null; _RTSP_CD_PID=""
-  [ -t 1 ] && printf '\r%*s\r' 90 ''
+  [ -t 1 ] && printf '\r\033[K'
   return 0
 }
 
@@ -83,12 +86,12 @@ _rtsp_start_impl() {
   tc_need_rtsp_tools || return 1
 
   # Theo tài liệu QCS6490-CameraBullet-Stream (server udpsrc + nguồn camera udpsink)
-  out="$(dev_script -t 30 W="$w" H="$h" PORT="$RTSP_PORT" UDP="$RTSP_UDP_PORT" IP="$DEVICE_IP" MOUNT="$RTSP_MOUNT" BR="$RTSP_BITRATE" <<'EOF2'
+  out="$(dev_script -t 30 W="$w" H="$h" PORT="$RTSP_PORT" UDP="$RTSP_UDP_PORT" IP="$DEVICE_IP" MOUNT="$RTSP_MOUNT" BR="$RTSP_STREAM_BITRATE" GOP="$RTSP_GOP" <<'EOF2'
 rm -f /tmp/mmi_rtsp.log /tmp/mmi_rtsp_src.log
 nohup gst-rtsp-server -p $PORT -a $IP -m $MOUNT "( udpsrc name=pay0 port=$UDP caps=\"application/x-rtp,media=video,clock-rate=90000,encoding-name=H264,payload=96\" )" >/tmp/mmi_rtsp.log 2>&1 </dev/null &
 echo $! > /tmp/mmi_rtsp.pid
 sleep 1
-nohup gst-launch-1.0 -e qtiqmmfsrc name=camsrc ! video/x-raw,format=NV12,width=$W,height=$H,framerate=30/1,interlace-mode=progressive,colorimetry=bt601 ! queue ! v4l2h264enc capture-io-mode=4 output-io-mode=5 extra-controls=\"controls,video_bitrate=$BR,force_key_frame=1,video_gop_size=10,video_bitrate_mode=1,intra_refresh_period=29\" ! queue ! h264parse config-interval=-1 ! rtph264pay pt=96 ! udpsink host=$IP port=$UDP >/tmp/mmi_rtsp_src.log 2>&1 </dev/null &
+nohup gst-launch-1.0 -e qtiqmmfsrc name=camsrc ! video/x-raw,format=NV12,width=$W,height=$H,framerate=30/1,interlace-mode=progressive,colorimetry=bt601 ! queue ! v4l2h264enc capture-io-mode=4 output-io-mode=5 extra-controls=\"controls,video_bitrate=$BR,force_key_frame=1,video_gop_size=$GOP,video_bitrate_mode=1,intra_refresh_period=29\" ! queue ! h264parse config-interval=-1 ! rtph264pay pt=96 ! udpsink host=$IP port=$UDP buffer-size=4194304 sync=false >/tmp/mmi_rtsp_src.log 2>&1 </dev/null &
 echo $! > /tmp/mmi_rtsp_src.pid
 sleep 3
 if kill -0 "$(cat /tmp/mmi_rtsp.pid)" 2>/dev/null && kill -0 "$(cat /tmp/mmi_rtsp_src.pid)" 2>/dev/null; then echo RTSP_PID_OK
@@ -157,20 +160,38 @@ _rtsp_check_impl() {
 
 rtsp_check() { _rtsp_check_impl "$@"; local rc=$?; _rtsp_cd_stop; return $rc; }
 
+# VLC dùng để xem RTSP: ưu tiên bản snap (có live555, chạy được trên Ubuntu 22.04), không có thì dùng vlc trong PATH
+_vlc_bin() {
+  if [ -x /snap/bin/vlc ]; then echo /snap/bin/vlc; else command -v vlc; fi
+}
+
 # _rtsp_launch <vlc|ffplay> <url>: mở player nền, đặt RTSP_VIEWER_PID. Return 1 nếu PC thiếu player.
 _rtsp_launch() {
+  local ll=error vq=--quiet
+  [ "${RTSP_VIEWER_DEBUG:-0}" = 1 ] && { ll=info; vq=-vv; }      # RTSP_VIEWER_DEBUG=1: log chi tiết của player vào $RTSP_VIEWER_LOG
   case "$1" in
     ffplay) command -v ffplay >/dev/null || return 1
-            ffplay -nostdin -loglevel quiet -fflags nobuffer -flags low_delay -framedrop -rtsp_transport tcp \
-                   -window_title "HSP-117 RTSP" -x 960 "$2" >/dev/null 2>&1 </dev/null & ;;
-    vlc)    command -v vlc >/dev/null || return 1
-            setsid vlc --quiet --network-caching="$RTSP_VLC_CACHE_MS" --live-caching="$RTSP_VLC_CACHE_MS" \
-                   --rtsp-tcp "$2" >/dev/null 2>&1 </dev/null & ;;
+            ffplay -loglevel "$ll" -fflags nobuffer -flags low_delay -framedrop -rtsp_transport tcp \
+                   -window_title "HSP-117 RTSP" -x 960 "$2" >/dev/null 2>>"$RTSP_VIEWER_LOG" </dev/null & ;;
+    vlc)    local vb; vb="$(_vlc_bin)"; [ -n "$vb" ] || return 1
+            setsid "$vb" $vq --network-caching="$RTSP_VLC_CACHE_MS" --live-caching="$RTSP_VLC_CACHE_MS" \
+                   --rtsp-tcp "$2" >/dev/null 2>>"$RTSP_VIEWER_LOG" </dev/null & ;;
     *) return 1 ;;
   esac
   RTSP_VIEWER_PID=$!
   disown "$RTSP_VIEWER_PID" 2>/dev/null
   return 0
+}
+
+# Lưu thông tin môi trường + log của player vào artifacts/rtsp_viewer.log (biết vì sao VLC/ffplay không mở được)
+_rtsp_viewer_diag() {
+  save_artifact "rtsp_viewer.log" "viewer=${1:-?}  user=$(id -un)  tty=$([ -t 1 ] && echo yes || echo no)
+DISPLAY=${DISPLAY:-}  WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-}  XDG_SESSION_TYPE=${XDG_SESSION_TYPE:-}  XAUTHORITY=${XAUTHORITY:-}
+vlc=$(_vlc_bin || echo MISSING) $(_vlc_bin >/dev/null && timeout 5 "$(_vlc_bin)" --version 2>/dev/null | head -n 1)
+ffplay=$(command -v ffplay || echo MISSING)
+url=$(rtsp_url)
+--- log của player ---
+$(tail -n 80 "$RTSP_VIEWER_LOG" 2>/dev/null)"
 }
 
 # Mở cửa sổ xem stream (nền). Return 1 nếu không mở được (không có màn hình / không có player)
@@ -182,15 +203,19 @@ rtsp_view() {
   if [ -n "$RTSP_VIEWER_PID" ] && kill -0 "$RTSP_VIEWER_PID" 2>/dev/null; then return 0; fi
   if [ "$v" = auto ]; then if command -v ffplay >/dev/null; then v=ffplay; else v=vlc; fi; fi
   case "$v" in ffplay|vlc) ;; *) return 1 ;; esac
-  if _rtsp_launch "$v" "$url"; then _rtsp_countdown "$RTSP_VIEWER_WAIT_S" "Đang mở $v, vui lòng chờ cửa sổ hiện hình"; else RTSP_VIEWER_PID=""; fi
+  if _rtsp_launch "$v" "$url"; then sleep "$RTSP_VIEWER_WAIT_S"; else RTSP_VIEWER_PID=""; fi
   if { [ -z "$RTSP_VIEWER_PID" ] || ! kill -0 "$RTSP_VIEWER_PID" 2>/dev/null; } \
      && [ "$v" = vlc ] && [ "${RTSP_VLC_FALLBACK:-1}" = 1 ]; then
     say "  VLC không mở được -> dùng ffplay"
     if _rtsp_launch ffplay "$url"; then sleep 2; else RTSP_VIEWER_PID=""; fi
   fi
   if [ -z "$RTSP_VIEWER_PID" ] || ! kill -0 "$RTSP_VIEWER_PID" 2>/dev/null; then
-    say "  Không mở được cửa sổ xem. Xem stream bằng VLC/ffplay: $url"; RTSP_VIEWER_PID=""; return 1
+    say "  Không mở được cửa sổ xem. Xem stream bằng VLC/ffplay: $url"; RTSP_VIEWER_PID=""
+    [ -s "$RTSP_VIEWER_LOG" ] && say "  Lỗi player: $(tail -n 2 "$RTSP_VIEWER_LOG" | tr '\n' ' ' | cut -c1-200)"
+    _rtsp_viewer_diag "$v"
+    return 1
   fi
+  [ "${RTSP_VIEWER_DEBUG:-0}" = 1 ] && _rtsp_viewer_diag "$v"
   return 0
 }
 

@@ -5,8 +5,8 @@
 : "${RTC_OFF_MIN_S:=20}"       # 5.4-5.5: thời gian tối thiểu mất nguồn (giây)
 : "${RTC_SET_TIME:=2026-01-27 08:49:00}"   # 5.4-5.5: giờ (UTC) đặt cho RTC trước khi rút nguồn, giống giờ trong tài liệu test
 : "${RTC_NTP_WAIT_S:=60}"      # 5.6: chờ tối đa để NTP kéo giờ hệ thống về đúng (giây)
-: "${RTC_UNPLUG_S:=25}"        # 5.4-5.5: đếm lùi sau khi nhắc RÚT NGUỒN (giây, nên >= RTC_OFF_MIN_S)
-: "${RTC_BOOT_WAIT_S:=30}"     # 5.5: tối đa chờ thiết bị khởi động trước khi cắm lại Ethernet (Enter để đi tiếp sớm)
+: "${RTC_UNPLUG_S:=20}"        # 5.4-5.5: đếm lùi sau khi nhắc RÚT NGUỒN (giây, nên >= RTC_OFF_MIN_S)
+: "${RTC_BOOT_WAIT_S:=30}"     # 5.5: đếm lùi chờ thiết bị khởi động xong rồi mới nhắc cắm lại Ethernet
 
 CASES_RTC=(
   "5.1|Kiểm tra nhận diện RTC|"
@@ -35,10 +35,10 @@ _rtc_countdown() {
   if [ ! -t 1 ]; then sleep "$n"; return 0; fi
   end=$((SECONDS + n))
   while [ "$SECONDS" -lt "$end" ]; do
-    printf '\r  %s: còn %3ds   ' "$label" "$((end - SECONDS))"
+    printf '\r  %s: %ds   ' "$label" "$((end - SECONDS))"
     if [ "$skip" = skip ] && [ -t 0 ]; then read -r -t 1 -n 1 _ && break; else sleep 1; fi
   done
-  printf '\r  %s: xong.                                  \n' "$label"
+  printf '\r%*s\r' 60 ''
 }
 
 # Đặt giờ hệ thống + RTC của thiết bị theo giờ PC (khôi phục sau các bài đổi giờ)
@@ -110,19 +110,19 @@ EOF2
     say "  ${C_Y}CẢNH BÁO: không tắt được dịch vụ đồng bộ giờ (rootfs chỉ đọc?). Nếu cắm lại Ethernet có Internet, NTP có thể chỉnh giờ trước khi tool đọc.${C_0}"
   fi
   if [ "$noeth" = noeth ]; then
-    say "  ➜ BƯỚC 1: RÚT CÁP ETHERNET rồi RÚT NGUỒN thiết bị (thiết bị khởi động lại khi không có mạng). Tool tự đếm lùi ${RTC_UNPLUG_S}s (mất nguồn tối thiểu ${RTC_OFF_MIN_S}s)."
+    say "  ➜ RÚT CÁP ETHERNET rồi RÚT NGUỒN thiết bị"
   else
-    say "  ➜ BƯỚC 1: RÚT NGUỒN thiết bị. Tool tự đếm lùi ${RTC_UNPLUG_S}s (mất nguồn tối thiểu ${RTC_OFF_MIN_S}s)."
+    say "  ➜ RÚT NGUỒN thiết bị"
   fi
-  _rtc_countdown "$RTC_UNPLUG_S" "Đang mất nguồn"
+  _rtc_countdown "$RTC_UNPLUG_S" "Mất nguồn"
   if [ "$noeth" = noeth ]; then
-    say "  ➜ BƯỚC 2: CẤP NGUỒN lại NGAY BÂY GIỜ (vẫn KHÔNG cắm Ethernet)."
-    say "  ➜ BƯỚC 3: thiết bị khởi động xong thì CẮM LẠI cáp Ethernet rồi nhấn Enter (tự đi tiếp sau tối đa ${RTC_BOOT_WAIT_S}s)."
-    _rtc_countdown "$RTC_BOOT_WAIT_S" "Chờ thiết bị khởi động" skip
+    say "  ➜ CẤP NGUỒN lại (chưa cắm Ethernet)"
+    _rtc_countdown "$RTC_BOOT_WAIT_S" "Chờ boot" skip      # Enter: bỏ qua đếm lùi nếu thiết bị đã lên sớm
+    say "  ➜ CẮM LẠI Ethernet"                              # chỉ hiện SAU khi đã chờ thiết bị boot; cắm xong tool tự kết nối, không cần nhấn Enter
   else
-    say "  ➜ BƯỚC 2: CẤP NGUỒN lại NGAY BÂY GIỜ (tool tự kết nối ngay khi thiết bị lên, không đợi hết thời gian)."
+    say "  ➜ CẤP NGUỒN lại"
   fi
-  say "  Chờ thiết bị kết nối lại (tối đa ${REBOOT_WAIT}s)..."
+  say "  Chờ thiết bị kết nối lại..."
   if ! wait_device "$REBOOT_WAIT"; then tc_fail "Thiết bị không kết nối lại sau ${REBOOT_WAIT}s"; return 1; fi
   for i in $(seq 1 15); do                            # RTC/dịch vụ có thể chưa sẵn sàng ngay sau khi adb lên: đọc ngay, lỗi thì thử lại mỗi 1s (tối đa 15 lần)
     if _rtc_read_state; then ok=1; break; fi
@@ -226,14 +226,14 @@ case_5_6() {
   if [ -z "$net" ] || [ "$net" = "100% packet loss" ]; then tc_skip "Thiết bị không có Internet (ping 8.8.8.8 lỗi)"; return 0; fi
   on_cleanup _rtc_restore_time
   dev_sh_t 30 "date -u -s '$RTC_SET_TIME' >/dev/null; systemctl restart systemd-timesyncd 2>/dev/null" >/dev/null 2>&1
-  say "  Đã làm lệch giờ hệ thống ($RTC_SET_TIME UTC), chờ NTP kéo về đúng (tối đa ${RTC_NTP_WAIT_S}s)..."
+  say "  Chờ NTP đồng bộ giờ..."
   while :; do
     if _rtc_read_state && [ "$(_abs "$(( RS_SYS - RS_PC ))")" -le "$TIME_TOL_S" ]; then break; fi
     [ "$w" -ge "$RTC_NTP_WAIT_S" ] && break
-    [ -t 1 ] && printf '\r  Chờ NTP đồng bộ: còn %3ds   ' "$(( RTC_NTP_WAIT_S - w ))"
+    [ -t 1 ] && printf '\r  Chờ NTP: %ds   ' "$(( RTC_NTP_WAIT_S - w ))"
     sleep 1; w=$((SECONDS - w0))
   done
-  [ -t 1 ] && printf '\r  Chờ NTP đồng bộ: xong (%ds).        \n' "$w"
+  [ -t 1 ] && printf '\r%*s\r' 60 ''
   _rtc_restore_time                                   # trả giờ thiết bị về giờ PC (giá trị cần dùng đã đọc xong)
   if [ -z "$RS_RTC" ] || [ -z "$RS_SYS" ]; then tc_fail "Không đọc được RTC (/sys/class/rtc/rtc0) hoặc giờ hệ thống"; return 0; fi
   dsys=$(( RS_SYS - RS_PC )); drtc=$(( RS_RTC - RS_PC ))

@@ -29,7 +29,7 @@ _lens_seq() {
     fi
     say "  Stream: $(rtsp_url) -> nhìn cửa sổ video (đặt vật có chi tiết trước camera để đánh giá nét/zoom)"
   fi
-  say "  Quan sát lens/hình ảnh trong lúc chạy: $label"
+  say "  Quan sát trong lúc chạy: $label"
   dev_script_live -t "$LENS_CALIB_TIMEOUT" LENS="$LENS_BIN $LENS_I2C" STEPS="$steps" PAUSE="$LENS_STEP_PAUSE" DELAY="$LENS_SET_DELAY" <<'EOF2'
 rc=0
 printf '%s\n' "$STEPS" | tr '|' '\n' > /tmp/mmi_lens_steps
@@ -53,7 +53,7 @@ case_11_1() { _lens_seq "Zoom"  "Trên stream, hình ảnh phóng to/thu nhỏ t
 case_11_2() { _lens_seq "Focus" "Trên stream, độ nét hình ảnh thay đổi tương ứng với focus 500 -> 0 -> 50?" "calib focus|focus-set 500|focus-set 0|focus-set 50"; }
 case_11_3() { _lens_seq "Iris"  "Trên stream, iris đóng/mở tương ứng với giá trị 100 -> 50 -> 0 (hình ảnh sáng/tối thay đổi)?" "calib iris|iris-set 100|iris-set 50|iris-set 0"; }
 case_11_4() { _lens_seq "IR CUT" "Trên stream, IR CUT đóng/mở đúng theo lệnh open -> close (nghe tiếng tách/hình đổi màu-đen trắng)?" "ircut open|ircut close"; rtsp_teardown; }   # hết IR CUT: đóng vlc + tắt RTSP
-case_11_7() { LENS_NEED_STREAM=0 _lens_seq "IR LED" "IR LED bật/tắt đúng theo lệnh on -> off (hình sáng lên/tối đi trong môi trường tối)?" "irled on|irled off"; }   # IR LED: không cần stream
+case_11_7() { LENS_NEED_STREAM=0 _lens_seq "IR LED" "Nhìn bằng mắt thường: đèn IR LED trên camera có bật rồi tắt đúng theo lệnh on -> off không?" "irled on|irled off"; }   # IR LED: không cần stream
 
 # 11.5, 11.6: đọc giá trị (rc=0 và có số)
 _lens_read() {

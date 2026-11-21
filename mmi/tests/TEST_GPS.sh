@@ -6,10 +6,10 @@
 
 CASES_GPS=(
   "4.1|Kiểm tra nhận dữ liệu|"
-  "4.2|Kiểm tra bắt vệ tinh|"
-  "4.3|Kiểm tra GNSS Fix|"
-  "4.4|Kiểm tra tọa độ|"
-  "4.5|Kiểm tra trạng thái Navigation|"
+  "4.2|Kiểm tra bắt vệ tinh|clusteronly"
+  "4.3|Kiểm tra GNSS Fix|clusteronly"
+  "4.4|Kiểm tra tọa độ|clusteronly"
+  "4.5|Kiểm tra trạng thái Navigation|clusteronly"
 )
 
 # Thu NMEA một lần cho mỗi lần chạy (các mục 4.1-4.5 dùng chung), kết quả trong $GPS_DATA

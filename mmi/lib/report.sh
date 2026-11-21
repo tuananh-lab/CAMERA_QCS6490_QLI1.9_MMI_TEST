@@ -161,6 +161,8 @@ make_html_report() {
   mkdir -p "$final" || { say "${C_R}Không tạo được thư mục báo cáo $final${C_0}"; return 0; }
   cp "$LOG_FILE" "$final/$base.log"
   cp "$RESULT_CSV" "$final/$base.csv"
+  # KEEP_ARTIFACTS=1 (config.sh): giữ cả thư mục artifacts/ (log thô từng mục) trong thư mục báo cáo để tra lỗi
+  if [ "${KEEP_ARTIFACTS:-0}" = 1 ] && [ -d "$REPORT_DIR/artifacts" ]; then cp -r "$REPORT_DIR/artifacts" "$final/artifacts" 2>/dev/null; fi
   if command -v python3 >/dev/null; then
     python3 "$MMI_DIR/lib/html_report.py" "$REPORT_DIR" "$final/$base.html" >/dev/null \
       || say "${C_Y}Không tạo được báo cáo HTML${C_0}"

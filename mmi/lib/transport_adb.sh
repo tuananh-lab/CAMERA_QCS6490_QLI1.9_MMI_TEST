@@ -112,7 +112,7 @@ tp_reboot() {
   for step in 'sync; reboot -f' 'reboot' 'echo 1 > /proc/sys/kernel/sysrq; echo b > /proc/sysrq-trigger'; do
     echo "[adb shell -tt] $step"
     _adb_tty "$step" | tail -n 4
-    for ((i = 0; i < 12; i++)); do
+    for ((i = 0; i < ${ADB_REBOOT_STEP_S:-12}; i++)); do
       tp_ready 2 || break 2                 # adb không trả lời nữa => thiết bị đã tắt, dừng
       sleep 1
     done

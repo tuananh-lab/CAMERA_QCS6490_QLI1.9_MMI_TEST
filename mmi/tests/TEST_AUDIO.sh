@@ -1,12 +1,16 @@
 #!/bin/bash
-# 10. Audio. 10.2, 10.4: tạo file tone 1 kHz trên PC, đẩy vào /tmp thiết bị, người test nghe.
-# 10.3 (Line In): PC phát tone 1 kHz vào cổng Line In (dây nối sẵn), thiết bị thu, tool kiểm tra tone rồi phát lại cho người test nghe.
+# 10. Audio. Phần cứng: Line Out hàn sẵn vào tai nghe, Line In nối sẵn với cổng ra âm thanh của PC.
+# 10.4 (Line Out): tạo file tone 1 kHz trên PC, đẩy vào /tmp thiết bị, thiết bị phát qua Line Out -> tai nghe, người test nghe.
+# 10.3 (Line In): PC phát tone 1 kHz vào cổng Line In, thiết bị thu, tool kiểm tra tone (RMS + 1 kHz),
+#                 sau đó file thu được phát lại qua Line Out -> tai nghe cho người test nghe (verify đường Line In).
 # 10.2 (WSA) chỉ chạy khi test cụm hoặc --case (cờ clusteronly), không chạy trong --all.
 # Có thể dùng file riêng: AUDIO_WAV=/đường/dẫn/file.wav (48 kHz, 16-bit, stereo)
 : "${AUDIO_WAV:=}"
+: "${AUDIO_PLAY_FILE:=}"           # nội bộ: file wav (stereo) cần phát qua Line Out thay cho tone (10.3 dùng để phát lại file thu)
 : "${AUDIO_REC_S:=5}"              # thời gian thu âm (giây)
 : "${AUDIO_MIN_RMS:=20}"           # file thu có tín hiệu: RMS >= ngưỡng (thang 16-bit)
 : "${AUDIO_TONE_MIN_RATIO:=0.3}"   # 10.3: tỷ lệ năng lượng tại 1 kHz / tổng trong file thu (1.0 = tone sạch); thấp hơn = không thu được tone từ PC
+: "${AUDIO_LINEIN_AMP:=3000}"      # 10.3: biên độ tone PC phát vào Line In (tối đa 32767; 3000 ≈ -21 dBFS). Nhỏ hơn = đỡ to
 
 CASES_AUDIO=(
   "10.1|Kiểm tra nhận diện Sound Card|"
@@ -32,9 +36,10 @@ case_10_1() {
 _audio_restore() { dev_sh "systemctl start pipewire.service wireplumber.service" >/dev/null 2>&1; }
 
 # Tạo/đẩy file phát vào /tmp/mmi_tone.wav
+# Ưu tiên: AUDIO_PLAY_FILE (file thu phát lại) > AUDIO_WAV (file riêng) > tone 1 kHz tự tạo
 _audio_tone() {
-  local f="${AUDIO_WAV:-$MMI_TMP/tone.wav}"
-  if [ -z "$AUDIO_WAV" ]; then
+  local f="${AUDIO_PLAY_FILE:-${AUDIO_WAV:-$MMI_TMP/tone.wav}}"
+  if [ -z "$AUDIO_PLAY_FILE" ] && [ -z "$AUDIO_WAV" ]; then
     python3 - "$f" <<'PY' || return 1
 import math, struct, sys, wave
 w = wave.open(sys.argv[1], 'wb'); w.setnchannels(2); w.setsampwidth(2); w.setframerate(48000)
@@ -60,12 +65,27 @@ print(len(d), "%.1f" % (n / 48000.0), "%.0f" % rms, max((abs(x) for x in a), def
 PY
 }
 
-# Tạo file tone 1 kHz (-6 dBFS, stereo 48 kHz) dài $1 giây để PC phát vào Line In -> $MMI_TMP/linein.wav
+# Đổi WAV 16-bit mono 48 kHz -> stereo (file thu là mono, đường phát Line Out dùng stereo): $1 = vào, $2 = ra
+_wav_mono2stereo() {
+  python3 - "$1" "$2" <<'PY'
+import array, sys, wave
+d = open(sys.argv[1], 'rb').read()
+i = d.find(b'data'); off = i + 8 if i >= 0 else 44
+a = array.array('h'); a.frombytes(d[off:off + (len(d) - off) // 2 * 2])
+st = array.array('h')
+for x in a: st.append(x); st.append(x)
+w = wave.open(sys.argv[2], 'wb'); w.setnchannels(2); w.setsampwidth(2); w.setframerate(48000)
+w.writeframes(st.tobytes()); w.close()
+PY
+}
+
+# Tạo file tone 1 kHz (stereo 48 kHz, biên độ AUDIO_LINEIN_AMP) dài $1 giây để PC phát vào Line In -> $MMI_TMP/linein.wav
 _audio_linein_wav() {
-  python3 - "$MMI_TMP/linein.wav" "$1" <<'PY' || return 1
+  python3 - "$MMI_TMP/linein.wav" "$1" "${AUDIO_LINEIN_AMP:-3000}" <<'PY' || return 1
 import math, struct, sys, wave
+amp = int(sys.argv[3])
 w = wave.open(sys.argv[1], 'wb'); w.setnchannels(2); w.setsampwidth(2); w.setframerate(48000)
-one = b''.join(struct.pack('<hh', int(16000 * math.sin(2 * math.pi * i / 48)), int(16000 * math.sin(2 * math.pi * i / 48))) for i in range(48))   # 48 mẫu = đúng 1 chu kỳ 1 kHz
+one = b''.join(struct.pack('<hh', int(amp * math.sin(2 * math.pi * i / 48)), int(amp * math.sin(2 * math.pi * i / 48))) for i in range(48))   # 48 mẫu = đúng 1 chu kỳ 1 kHz
 w.writeframes(one * (1000 * int(sys.argv[2])))
 w.close()
 PY
@@ -95,14 +115,14 @@ PY
 # Dừng tiến trình PC đang phát tone vào Line In (nếu còn)
 _audio_pc_stop() { [ -n "${AUDIO_PC_PID:-}" ] && kill "$AUDIO_PC_PID" 2>/dev/null; AUDIO_PC_PID=""; return 0; }
 
-# Phát file qua loa. $1 = nhãn; script tinymix + agmplay đọc từ stdin (heredoc của hàm gọi)
+# Phát file qua loa/Line Out. $1 = nhãn, $2 = câu hỏi người test; script tinymix + agmplay đọc từ stdin (heredoc của hàm gọi)
 _audio_play_case() {
   local label="$1" ask="$2" rc script
   script="$(cat)"        # đọc script từ stdin TRƯỚC: lệnh adb shell bên dưới sẽ nuốt stdin nếu còn dữ liệu
   tc_need tinymix agmplay || return 0
   _audio_tone || { tc_fail "Không tạo/đẩy được file wav lên thiết bị"; return 0; }
   on_cleanup _audio_restore
-  say "  Đang phát tone 1 kHz (5s) - $label ..."
+  say "  Đang phát (5s) - $label ..."
   dev_script_live -t 60 <<< "$script"
   rc=$?
   if [ $rc -ne 0 ]; then tc_fail "$label: lệnh phát lỗi (rc=$rc), xem log"; return 0; fi
@@ -135,10 +155,10 @@ rc=$?; echo "agmplay rc=$rc"; exit $rc
 EOF2
 }
 
-# 10.4: WCD - Line Out
-case_10_4() {
-  pause_enter "Cắm JACK LOA vào cổng Line Out rồi nhấn Enter..."
-  _audio_play_case "Line Out (WCD)" "Có âm thanh phát ra từ LINE OUT, rõ, không rè/nhiễu?" <<'EOF2'
+# Phát /tmp/mmi_tone.wav (tone, AUDIO_WAV hoặc AUDIO_PLAY_FILE) qua Line Out -> tai nghe. $1 = nhãn, $2 = câu hỏi người test
+# Dùng chung cho 10.4 (phát tone) và 10.3 (phát lại file thu)
+_audio_lineout() {
+  _audio_play_case "$1" "$2" <<'EOF2'
 fail=0
 tm() { tinymix set "$@" >/dev/null 2>&1 || { echo "tinymix lỗi: $*"; fail=1; }; }
 systemctl stop pipewire.service; systemctl stop wireplumber.service
@@ -168,6 +188,11 @@ rc=$?; echo "agmplay rc=$rc"; exit $rc
 EOF2
 }
 
+# 10.4: WCD - Line Out (tai nghe hàn sẵn vào Line Out, không cần cắm jack)
+case_10_4() {
+  _audio_lineout "Line Out (WCD)" "Có âm thanh phát ra từ TAI NGHE (Line Out), rõ, không rè/nhiễu?"
+}
+
 # Thu âm một đường: _audio_rec <tên: mic_3|mic_1> (đọc script tinymix từ stdin)
 _audio_rec() {
   local name="$1" f="/tmp/mmi_$1.wav" local_f rc
@@ -182,8 +207,10 @@ _audio_rec() {
 }
 
 # 10.3: WCD - Line In (chỉ AMIC3)
+# PC phát tone vào Line In -> thiết bị thu -> tool kiểm tra RMS/tone -> phát lại file thu qua Line Out (tai nghe) cho người test nghe
 case_10_3() {
   local n st bytes secs rms peak bad="" info="" r ratio pcwav use_tone=1
+  [ "${AUDIO_LINEIN_SKIP:-0}" = 1 ] && { tc_skip "Tạm bỏ test Line In (AUDIO_LINEIN_SKIP=1)"; return 0; }
   tc_need tinymix agmcap || return 0
   on_cleanup _audio_restore
   on_cleanup _audio_pc_stop
@@ -237,14 +264,10 @@ EOF2
   say "  Kết quả phân tích:$info"
   if [ -n "$bad" ]; then tc_fail "$bad"; return 0; fi
 
-  if command -v ffplay >/dev/null; then
-    for n in mic_3; do
-      say "  Phát lại $n trên PC..."
-      timeout $((AUDIO_REC_S + 5)) ffplay -nodisp -autoexit -loglevel quiet "$(artifact "$n.wav")" >/dev/null 2>&1
-    done
-  else
-    say "  (PC không có ffplay) Nghe file trong: $REPORT_DIR/artifacts/mic_3.wav"
-  fi
-  tc_manual "File thu AMIC3 (Line In) nghe lại có tiếng tone rõ, đều, không rè/nhiễu quá nhiều?" \
-            "AMIC3 thu được tone rõ:$info" "Người test: file thu AMIC3 bị rè/nhiễu/mất tiếng:$info"
+  # Phát lại file thu AMIC3 qua Line Out -> tai nghe để người test nghe (verify đường Line In)
+  _wav_mono2stereo "$(artifact mic_3.wav)" "$MMI_TMP/mic_3_st.wav" || { tc_fail "Không chuyển được file thu sang stereo"; return 0; }
+  AUDIO_PLAY_FILE="$MMI_TMP/mic_3_st.wav"
+  _audio_lineout "Phát lại file thu Line In qua tai nghe ($info )" \
+    "Nghe lại file thu từ Line In (PC phát tone) qua TAI NGHE: có tone rõ, đều, không rè/nhiễu quá nhiều?"
+  AUDIO_PLAY_FILE=""
 }

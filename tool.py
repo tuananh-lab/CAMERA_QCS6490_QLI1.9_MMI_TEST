@@ -39,7 +39,7 @@ CFG = read_config("PRODUCT_NAME", "PRODUCT_CODE", "TRANSPORT", "CLUSTERS", "DEVI
 PRODUCT_NAME = CFG.get("PRODUCT_NAME") or "Camera"
 PRODUCT_CODE = CFG.get("PRODUCT_CODE") or "HSP-117"
 DEVICE_IP = (CFG.get("DEVICE_IP") or "").strip()      # static IP: ONE line in config.sh (DEVICE_IP)
-REBOOT_WAIT = int(CFG.get("REBOOT_WAIT") or 180)
+REBOOT_WAIT = int(CFG.get("REBOOT_WAIT") or 90)
 # Test clusters come from config.sh (CLUSTERS / CLUSTER_<NAME>)
 CLUSTERS = (CFG.get("CLUSTERS") or "CARRIER-KIMQ IMAGE-SENSOR LED").split()
 CLUSTER_INFO = {                      # short hint shown next to each cluster name
@@ -272,7 +272,7 @@ def read_ids():
 def reboot_device():
     """Reboot button: reboot, wait until the device is back, then show Chip ID / Serial / MAC again."""
     if messagebox.askyesno("Reboot Device",
-                           "Reboot %s now?\n\nWait until the window shows the device is back (about 1-2 minutes)." % DEVICE_IP):
+                           "Reboot %s now?\n\nWait until the window shows the device is back (about 1 minutes)." % DEVICE_IP):
         run_info("--reboot", "Rebooting", REBOOT_WAIT + 90)
 
 

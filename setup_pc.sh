@@ -28,7 +28,7 @@ TOOLS=(
   "ffmpeg|ffmpeg|1|đo stream RTSP"
   "ffprobe|ffmpeg|1|kiểm tra ảnh/video"
   "ffplay|ffmpeg|1|xem stream RTSP, nghe audio"
-  "vlc|vlc|1|xem stream RTSP (dự phòng)"
+  "vlc|vlc|0|xem stream RTSP (cần VLC có live555; Ubuntu 22.04 dùng snap)"
   "timeout|coreutils|1|giới hạn thời gian lệnh"
   "pgrep|procps|1|kiểm tra tiến trình"
   "ip|iproute2|1|dò IP của PC"
@@ -37,7 +37,16 @@ TOOLS=(
   "xdg-open|xdg-utils|0|mở ảnh/thư mục báo cáo"
 )
 
-is_ok() { case "$1" in tkinter) python3 -c 'import tkinter' >/dev/null 2>&1 ;; *) command -v "$1" >/dev/null 2>&1 ;; esac; }
+# VLC có hỗ trợ RTSP không? (VLC apt Ubuntu 22.04 không có --rtsp-tcp; bản snap thì có)
+vlc_rtsp_ok() {
+  local b
+  for b in /snap/bin/vlc "$(command -v vlc)"; do
+    [ -x "$b" ] && "$b" -H 2>/dev/null | grep -q -- '--rtsp-tcp' && return 0
+  done
+  return 1
+}
+
+is_ok() { case "$1" in tkinter) python3 -c 'import tkinter' >/dev/null 2>&1 ;; vlc) vlc_rtsp_ok ;; *) command -v "$1" >/dev/null 2>&1 ;; esac; }
 
 MISSING_REQ=(); MISSING_PKGS=()
 scan() {
@@ -90,7 +99,7 @@ echo "${B}Cài: ${PKG_LIST[*]}${N}"
 # iperf3 hay hỏi "chạy như daemon?" -> trả lời trước để không bị treo
 echo "iperf3 iperf3/start_daemon boolean false" | $SUDO debconf-set-selections 2>/dev/null
 $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y "${PKG_LIST[@]}"
-
+vlc_rtsp_ok || { command -v snap >/dev/null && $SUDO snap install vlc; }
 echo
 QUIET=0; scan
 if [ ${#MISSING_REQ[@]} -eq 0 ]; then echo "${G}Xong: đã đủ tool bắt buộc.${N}"; pause_end; exit 0; fi
